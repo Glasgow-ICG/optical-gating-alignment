@@ -2,6 +2,9 @@ import numpy as np
 from pprint import pprint
 #np.set_printoptions(threshold=np.nan)
 np.set_printoptions(formatter={'float_kind': lambda x: "{0:0.0f}\t".format(x)})
+import sys
+sys.path.insert(0, '../py_sad_correlation/')
+import j_py_sad_correlation as jps
 
 def constructCascade(scores,gp):
     # Construct grid
@@ -28,12 +31,18 @@ def nCascadingNWA(seq1,seq2,gapPenalty=0,log=False):
     if log:
         print('Sequence #1 has {0} frames and sequence #2 has {1} frames;'.format(len(seq1),len(seq2)))
 
-    # Calculate SSDs
+    # Calculate SSDs - python
     ssds = np.zeros([len(seq2),len(seq1)],'float')
 
     for t2 in range(len(seq2)):
         for t1 in range(len(seq1)):
-            ssds[t2,t1] = np.sum((seq1[t1]-seq2[t2])**2)/seq1[t1].size
+            ssds[t2,t1] = np.sum(np.abs((seq1[t1].astype('float')-seq2[t2].astype('float'))))
+
+    print(ssds)
+
+    # Calculate SSDs - C++
+    ssds = jps.sad_grid(seq1, seq2)
+    print(ssds)
 
     if log:
         print ('Score matrix:')
@@ -51,6 +60,7 @@ def nCascadingNWA(seq1,seq2,gapPenalty=0,log=False):
     nwa = cascades[:,:,rollFactor]
     seq1 = np.roll(seq1,rollFactor,axis=2)
     if log:
+        print('Cascade scores:\t',cascades[len(seq2),len(seq1),:])
         print ('Chose cascade {0} of {1}:'.format(rollFactor,len(seq1)))
         print(nwa)
         print('Shape: ({0},{1})'.format(nwa.shape[0],nwa.shape[1]))
@@ -141,8 +151,8 @@ if __name__ == '__main__':
     str2 = [4,5,6,7,8,0,1,1,1,2,3]
     print('Sequence #1: {0}'.format(str1))
     print('Sequence #2: {0}'.format(str2))
-    seq1  = np.asarray(str1).reshape([len(str1),1,1])
-    seq2  = np.asarray(str2).reshape([len(str2),1,1])
+    seq1  = np.asarray(str1,'uint8').reshape([len(str1),1,1])
+    seq2  = np.asarray(str2,'uint8').reshape([len(str2),1,1])
     seq1 = np.repeat(np.repeat(seq1,10,1),5,2)
     seq2 = np.repeat(np.repeat(seq2,10,1),5,2)
 
