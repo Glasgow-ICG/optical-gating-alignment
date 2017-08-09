@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>binning_code</key>
+	<integer>0</integer>
+	<key>binning_description</key>
+	<string>1x1</string>
+	<key>camera_gain_db</key>
+	<real>0.0</real>
+	<key>cascaded_for_calibration</key>
+	<false/>
+	<key>cascaded_from</key>
+	<integer>4</integer>
+	<key>crop_rect</key>
+	<string>{{336, 264}, {109, 92}}</string>
+	<key>crosshairs</key>
+	<string>{-1, -1}</string>
+	<key>drift_offset</key>
+	<string>{0, 0}</string>
+	<key>est_framerate</key>
+	<real>80.05076499619726</real>
+	<key>experimenter_name</key>
+	<string></string>
+	<key>exposure_in_ms</key>
+	<real>1.0</real>
+	<key>exposure_on_screen</key>
+	<real>1.0</real>
+	<key>frame_number</key>
+	<integer>227</integer>
+	<key>image_rect_on_sensor</key>
+	<string>{{214, 138}, {109, 92}}</string>
+	<key>image_rect_universal_qi_pixels</key>
+	<string>{{213, 263}, {109, 92}}</string>
+	<key>in_sync</key>
+	<false/>
+	<key>laserMapping</key>
+	<integer>0</integer>
+	<key>laser_state</key>
+	<integer>0</integer>
+	<key>manual_framerate</key>
+	<real>80.0</real>
+	<key>model_string</key>
+	<string>Allied Vision Technologies GS650</string>
+	<key>piv</key>
+	<dict>
+		<key>pivGapBeforeExposure1End</key>
+		<real>0.0</real>
+		<key>pivInterPulseTime</key>
+		<real>0.0</real>
+		<key>pivLaserPulseTime</key>
+		<real>1.0</real>
+	</dict>
+	<key>pixels_per_um</key>
+	<real>1.3513513513513513</real>
+	<key>postacquisition_phase</key>
+	<real>3.2315931249515053</real>
+	<key>program_info</key>
+	<dict>
+		<key>Compiler version</key>
+		<string>4.2.1 Compatible Apple LLVM 7.3.0 (clang-703.0.31)</string>
+		<key>Config file</key>
+		<string>Glasgow xmos config v2</string>
+		<key>SDK version</key>
+		<string>macosx10.11</string>
+		<key>Version</key>
+		<string>v1.1.0-41-ga8791da-dirty</string>
+	</dict>
+	<key>readout_speed</key>
+	<integer>40000000</integer>
+	<key>registration_offset</key>
+	<string>{-1, -1}</string>
+	<key>scale_bar_width_in_um</key>
+	<real>0.0</real>
+	<key>sensor_bounds</key>
+	<string>{659, 494}</string>
+	<key>serial_number</key>
+	<string>0001f61c</string>
+	<key>specimen_description</key>
+	<string>2/5 fish 50mW versalase (0.6x)</string>
+	<key>stage_positions</key>
+	<dict>
+		<key>last_known_f</key>
+		<real>0.0</real>
+		<key>last_known_f_time</key>
+		<real>0.0</real>
+		<key>last_known_t</key>
+		<real>0.0</real>
+		<key>last_known_t_time</key>
+		<real>0.0</real>
+		<key>last_known_x</key>
+		<real>0.0</real>
+		<key>last_known_x_time</key>
+		<real>18.21613282600083</real>
+		<key>last_known_y</key>
+		<real>-30.15</real>
+		<key>last_known_y_time</key>
+		<real>2538.4493890679996</real>
+		<key>last_known_z</key>
+		<real>141.99</real>
+		<key>last_known_z_time</key>
+		<real>2410.4961703870003</real>
+	</dict>
+	<key>sync_info</key>
+	<dict>
+		<key>deliberately_fired</key>
+		<false/>
+		<key>delta_phase</key>
+		<real>0.0</real>
+		<key>intended_fire_time</key>
+		<real>0.0</real>
+		<key>phase</key>
+		<real>0.0</real>
+		<key>pixel_value_sum</key>
+		<real>0.0</real>
+		<key>ref_pos_incl_padding</key>
+		<real>0.0</real>
+		<key>ref_pos_without_padding</key>
+		<real>0.0</real>
+		<key>reference_period</key>
+		<real>0.0</real>
+		<key>sync_analysis_performed</key>
+		<false/>
+		<key>trigger_cycle</key>
+		<integer>0</integer>
+		<key>trigger_mpc</key>
+		<integer>0</integer>
+	</dict>
+	<key>time_processing_started</key>
+	<real>2538.449944236</real>
+	<key>time_received</key>
+	<real>2538.44986978</real>
+	<key>timebase_start</key>
+	<date>2017-05-07T11:51:52Z</date>
+	<key>timebase_start_uptime</key>
+	<real>7751.548115728</real>
+	<key>timestamp</key>
+	<real>9497.074805796572</real>
+	<key>trigger_delay_ms</key>
+	<real>0.0</real>
+	<key>triggering</key>
+	<dict>
+		<key>box_type</key>
+		<string>None</string>
+	</dict>
+	<key>user_name</key>
+	<string>Allied Vision Technologies GS650 0001f61c</string>
+	<key>was_flipped_h</key>
+	<true/>
+	<key>was_flipped_v</key>
+	<true/>
+</dict>
+</plist>

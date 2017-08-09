@@ -38,11 +38,11 @@ def nCascadingNWA(seq1,seq2,gapPenalty=0,log=False):
         for t1 in range(len(seq1)):
             ssds[t2,t1] = np.sum(np.abs((seq1[t1].astype('float')-seq2[t2].astype('float'))))
 
-    print(ssds)
+    #print(ssds)
 
     # Calculate SSDs - C++
     ssds = jps.sad_grid(seq1, seq2)
-    print(ssds)
+    #print(ssds)
 
     if log:
         print ('Score matrix:')

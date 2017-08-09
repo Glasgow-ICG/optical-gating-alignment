@@ -1,6 +1,0 @@
-All from: 2017-02-09 18.35.13 vid overnight
-
-seq1 - first full beat of Stack 0004 (starting at reference frame 0)
-seq2 - first full beat of Stack 0004 offset by pi (starting at reference frame period//2)
-seq2 - second full beat of Stack 0004 (starting at reference frame 0)
-seq4 - last full beat of Stack 0006 (starting at reference frame 0)
