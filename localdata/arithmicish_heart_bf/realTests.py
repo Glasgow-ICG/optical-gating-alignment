@@ -85,7 +85,7 @@ settings3.update({'drift':[0,0]})#starting drift corrections[0,0]
 
 # seq0 with seq0
 print('Comparing sequence #0 with itself...')
-s0,s0b = afd.matchFrames(seq0,seq0,settings0)
+s0,s0b = afd.matchFrames(seq0,seq0,settings0['drift'])
 
 print('n-Cascading Needleman-Wunsch Algorithm:')
 alignment1, alignment2, rollFactor = cnw.nCascadingNWA(s0,s0b)
@@ -103,7 +103,7 @@ print('Aligned sequence #0:\t{0};'.format(alignment2))
 m = 10
 print('Comparing sequence #0 with itself missing frame {0}...'.format(m))
 seq0m = np.concatenate((seq0[:m],seq0[m+1:]),axis=0)
-s0,s0m = afd.matchFrames(seq0,seq0m,settings0)
+s0,s0m = afd.matchFrames(seq0,seq0m,settings0['drift'])
 
 print('n-Cascading Needleman-Wunsch Algorithm:')
 alignment1, alignment2, rollFactor = cnw.nCascadingNWA(s0,s0m,log=False)
@@ -121,7 +121,7 @@ print('Aligned sequence #0m:\t{0};'.format(alignment2))
 m = 10
 print('Comparing sequence #0 with itself with frame {0} duplicated...'.format(m))
 seq0d = np.concatenate((seq0[:m+1],seq0[m:]),axis=0)
-s0,s0d = afd.matchFrames(seq0,seq0d,settings0)
+s0,s0d = afd.matchFrames(seq0,seq0d,settings0['drift'])
 
 print('n-Cascading Needleman-Wunsch Algorithm:')
 alignment1, alignment2, rollFactor = cnw.nCascadingNWA(s0,s0d,log=False)
@@ -137,7 +137,7 @@ print('Aligned sequence #0d:\t{0};'.format(alignment2))
 
 # seq0 with seq1
 print('Comparing sequence #0 with sequence #1...')
-s0,s1 = afd.matchFrames(seq0,seq1,settings1)
+s0,s1 = afd.matchFrames(seq0,seq1,settings1['drift'])
 
 print('n-Cascading Needleman-Wunsch Algorithm:')
 alignment1, alignment2, rollFactor = cnw.nCascadingNWA(s0,s1,log=False)
@@ -153,7 +153,7 @@ print('Aligned sequence #0d:\t{0};'.format(alignment2))
 
 # seq0 with seq2
 print('Comparing sequence #0 with sequence #2...')
-s0,s2 = afd.matchFrames(seq0,seq2,settings2)
+s0,s2 = afd.matchFrames(seq0,seq2,settings2['drift'])
 
 print('n-Cascading Needleman-Wunsch Algorithm:')
 alignment1, alignment2, rollFactor = cnw.nCascadingNWA(s0,s2,log=False)
@@ -169,7 +169,7 @@ print('Aligned sequence #0d:\t{0};'.format(alignment2))
 
 # seq0 with seq3
 print('Comparing sequence #0 with sequence #3...')
-s0,s3 = afd.matchFrames(seq0,seq3,settings3)
+s0,s3 = afd.matchFrames(seq0,seq3,settings3['drift'])
 
 print('n-Cascading Needleman-Wunsch Algorithm:')
 alignment1, alignment2, rollFactor = cnw.nCascadingNWA(s0,s3,log=False)

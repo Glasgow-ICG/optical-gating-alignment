@@ -6,9 +6,10 @@ import time
 import math
 from copy import copy
 
-def matchFrames(seq1,seq2,settings):
-    dx = settings['drift'][0]
-    dy = settings['drift'][1]
+def matchFrames(seq1,seq2,drift):
+    # user must provide drift (see period.txt files)
+    dx = drift[0]
+    dy = drift[1]
 
     #apply shifts
     rectF = [0,seq1[0].shape[0],0,seq1[0].shape[1]]#X1,X2,Y1,Y2
