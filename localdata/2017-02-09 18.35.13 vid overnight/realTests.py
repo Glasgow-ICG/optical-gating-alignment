@@ -1,6 +1,6 @@
 import sys
 sys.path.insert(0, '../j_postacquisition/')
-import image_loading as jld
+import image_loading as jid
 sys.path.insert(0, '.')#because this file is run from this folder but not actually in this folder
 import accountForDrift as afd
 import nCascadingNW as cnw
@@ -15,7 +15,7 @@ blurSigma = 3
 
 #seq0
 stackNumber = 0
-sequenceObj = jld.LoadAllImages(sequenceName.format(stackNumber),True,1,0,-1,None)
+sequenceObj = jid.LoadAllImages(sequenceName.format(stackNumber),True,1,0,-1,None)
 sequenceObj = sequenceObj[0]
 sequenceLength = sequenceObj.size
 times = np.zeros(sequenceLength)
@@ -30,7 +30,7 @@ print('Loaded sequence #{0} consisting of {1} frames;'.format(stackNumber,len(se
 
 #seq1
 stackNumber = 1
-sequenceObj = jld.LoadAllImages(sequenceName.format(stackNumber),True,1,0,-1,None)
+sequenceObj = jid.LoadAllImages(sequenceName.format(stackNumber),True,1,0,-1,None)
 sequenceObj = sequenceObj[0]
 sequenceLength = sequenceObj.size
 times = np.zeros(sequenceLength)
@@ -45,7 +45,7 @@ print('Loaded sequence #{0} consisting of {1} frames;'.format(stackNumber,len(se
 
 #seq2
 stackNumber = 2
-sequenceObj = jld.LoadAllImages(sequenceName.format(stackNumber),True,1,0,-1,None)
+sequenceObj = jid.LoadAllImages(sequenceName.format(stackNumber),True,1,0,-1,None)
 sequenceObj = sequenceObj[0]
 sequenceLength = sequenceObj.size
 times = np.zeros(sequenceLength)
@@ -60,7 +60,7 @@ print('Loaded sequence #{0} consisting of {1} frames;'.format(stackNumber,len(se
 
 #seq3
 stackNumber = 3
-sequenceObj = jld.LoadAllImages(sequenceName.format(stackNumber),True,1,0,-1,None)
+sequenceObj = jid.LoadAllImages(sequenceName.format(stackNumber),True,1,0,-1,None)
 sequenceObj = sequenceObj[0]
 sequenceLength = sequenceObj.size
 times = np.zeros(sequenceLength)

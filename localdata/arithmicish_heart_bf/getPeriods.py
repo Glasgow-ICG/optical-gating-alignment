@@ -13,7 +13,7 @@ import os
 # Local
 import sys
 sys.path.insert(0, '../j_postacquisition/')
-import image_loading as jld
+import image_loading as jid
 sys.path.insert(0, '../cjn-python-emulator/')
 import getPeriod as gpd
 import realTimeSync as rts
@@ -21,11 +21,11 @@ import longTermUpdating as ltu
 import helper as hlp
 
 # set-up
-settings = hlp.initialiseSettings(estFramerate=80.0)
+settings = hlp.initialiseSettings(framerate=80)
 
 # load data
 sequenceName = '../notebooks/localdata/arithmicish_heart_bf/Allied Vision Technologies GS650 0001f61c/'
-sequenceObj = jld.LoadAllImages(sequenceName,True,1,0,-1,None)
+sequenceObj = jid.LoadAllImages(sequenceName,True,1,0,-1,None)
 sequence, idx = hlp.convertObj(sequenceObj)
 
 # Get First Full Period and Reference Period from Sequence

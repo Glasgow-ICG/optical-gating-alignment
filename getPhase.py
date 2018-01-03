@@ -19,10 +19,17 @@ def getPhase(alignment1,alignment2,phase,log=False):
         for idx1 in range(s1len):#for each position
             if log:
                 print(idx1,alignment1[idx1])
+                # print(alignment1[idx1]>=0,allow,alignment1[idx1]==min(alignment1[alignment1>0]),alignment1[idx1]>phase)
             if alignment1[idx1]>=0 and not allow and alignment1[idx1]<phase:
                 allow=True
                 if log:
                     print('Allowing...')
+            elif alignment1[idx1]>=0 and not allow and alignment1[idx1]==min(alignment1[alignment1>0]) and alignment1[idx1]>phase:# if target is at the wrap point
+                if log:
+                    print('WARNING: Desired phase at alignment sequence 1 wrap point (type1)')
+                a1l = idx1-1
+                a1u = idx1
+                break
             elif allow and alignment1[idx1]>=phase:#assign bounds, ignoring gaps in lower bound
                 a1l = idx1-1
                 a1u = idx1
@@ -31,7 +38,7 @@ def getPhase(alignment1,alignment2,phase,log=False):
                 break
             elif allow and alignment1[idx1]==0:
                 if log:
-                    print('WARNING: Desired phase at alignment sequence 1 wrap point')
+                    print('WARNING: Desired phase at alignment sequence 1 wrap point (type2)')
                 a1l = idx1-1
                 a1u = idx1
                 break

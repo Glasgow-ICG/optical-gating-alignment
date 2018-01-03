@@ -122,7 +122,7 @@ def crossCorrelationRolling(seq1, seq2, period1, period2, useTri=True, log=False
         print('Alignment 2:\t{0}'.format(alignment2))
         print('Rolled by {0}'.format(rollFactor))
     # convert to list for consistency with nCascadingNW.py
-    return list(alignment1), list(alignment2), rollFactor
+    return list(alignment1), list(alignment2), rollFactor, minVal
 
 
 def makeArrayFromSequence(seq):

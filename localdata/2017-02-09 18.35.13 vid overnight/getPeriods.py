@@ -14,7 +14,7 @@ import os
 # Local
 import sys
 sys.path.insert(0, '../j_postacquisition/')
-import image_loading as jld
+import image_loading as jid
 sys.path.insert(0, '../cjn-python-emulator/')
 import getPeriod as gpd
 import realTimeSync as rts
@@ -23,7 +23,7 @@ import helper as hlp
 
 settings = {}
 settings.update({'drift':[-5,-2]})#starting drift corrections
-settings.update({'estFramerate':79.449466058641775})#starting est frame rate
+settings.update({'framerate':80})#starting est frame rate
 settings.update({'numExtraRefFrames':2})#padding number
 settings.update({'minFramesForFit':3})#frames to fit for prediction (min)
 settings.update({'maxFramesForFit':32})#frames to fit for prediction (max)
@@ -43,7 +43,7 @@ referenceImages = ltu.loadReference(ltu.getReference(referenceNameFormat,3))
 # Load Stack 004
 sequenceName = '../notebooks/localdata/2017-02-09 18.35.13 vid overnight/Stack {0:04d}/Brightfield - Prosilica/'
 stackNumber = 4
-sequenceObj = jld.image_loading.LoadAllImages(sequenceName.format(stackNumber),True,1,0,-1,None)
+sequenceObj = jid.image_loading.LoadAllImages(sequenceName.format(stackNumber),True,1,0,-1,None)
 startFrame = 121337
 
 # order sequence
@@ -111,7 +111,7 @@ while True:
 
 # Reset settingssettings = {}
 settings.update({'drift':[-5,-1]})#starting drift corrections
-settings.update({'estFramerate':79.925886315283961})#starting est frame rate
+settings.update({'framerate':80})#starting est frame rate
 
 # Load Stack 006
 sequenceName = '../notebooks/localdata/2017-02-09 18.35.13 vid overnight/Stack {0:04d}/Brightfield - Prosilica/'

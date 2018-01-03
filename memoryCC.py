@@ -1,5 +1,6 @@
 import numpy as np
 import math
+from pprint import pprint
 
 import simpleCC as scc
 import accountForDrift as afd
@@ -8,11 +9,11 @@ sys.path.insert(0, '../j_postacquisition/')
 import shifts as shf
 import shifts_global_solution as sgs
 
-def processNewReferenceSequence(rawRefFrames, thisPeriod, resampledSequences, periodHistory, shifts, knownPhaseIndex=0, knownPhase=0, numSamplesPerPeriod=80, maxOffsetToConsider=1):
+def processNewReferenceSequence(rawRefFrames, thisPeriod, resampledSequences, periodHistory, shifts, knownPhaseIndex=0, knownPhase=0, numSamplesPerPeriod=80, maxOffsetToConsider=2):
     #Stolen from JT but simplified/adapted
     # here rawRefFrames is a PxMxN numpy array representing the new raw reference frames
 
-    # Resample latest reference frames and add them to our sequence set
+    # Add latest reference frames to our sequence set
     thisResampledSequence = scc.resampleImageSection(rawRefFrames, thisPeriod, numSamplesPerPeriod)
     resampledSequences.append(thisResampledSequence)
     periodHistory.append(thisPeriod)
@@ -30,11 +31,23 @@ def processNewReferenceSequence(rawRefFrames, thisPeriod, resampledSequences, pe
 
     (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts, len(resampledSequences), numSamplesPerPeriod, knownPhaseIndex, knownPhase)
 
-    result = (resampledSequences,periodHistory, shifts, globalShiftSolution[-1])
+    residuals = np.zeros([len(globalShiftSolution),])
+    for i in range(len(globalShiftSolution)-1):
+        diff = 0
+        for shift in shifts:
+            if shift[1]==shifts[-1][1] and shift[0]==i:
+                residuals[i] = (globalShiftSolution[-1] - globalShiftSolution[i] - shift[2])
+                break
+        while residuals[i]>(numSamplesPerPeriod/2):
+            residuals[i] = residuals[i]-numSamplesPerPeriod
+        while residuals[i]<-(numSamplesPerPeriod/2):
+            residuals[i] = residuals[i]+numSamplesPerPeriod
+
+    result = (resampledSequences, periodHistory, shifts, globalShiftSolution[-1], residuals)
 
     return result
 
-def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, resampledSequences, periodHistory, driftHistory, shifts, knownPhaseIndex=0, knownPhase=0, numSamplesPerPeriod=80, maxOffsetToConsider=1):
+def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, resampledSequences, periodHistory, driftHistory, shifts, knownPhaseIndex=0, knownPhase=0, numSamplesPerPeriod=80, maxOffsetToConsider=2):
     #Stolen from JT but simplified/adapted
     # here rawRefFrames is a PxMxN numpy array representing the new raw reference frames
 
@@ -59,6 +72,18 @@ def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, re
 
     (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts, len(resampledSequences), numSamplesPerPeriod, knownPhaseIndex, knownPhase)
 
-    result = (resampledSequences, periodHistory, driftHistory, shifts, globalShiftSolution[-1])
+    residuals = np.zeros([len(globalShiftSolution),])
+    for i in range(len(globalShiftSolution)-1):
+        diff = 0
+        for shift in shifts:
+            if shift[1]==shifts[-1][1] and shift[0]==i:
+                residuals[i] = (globalShiftSolution[-1] - globalShiftSolution[i] - shift[2])
+                break
+        while residuals[i]>(numSamplesPerPeriod/2):
+            residuals[i] = residuals[i]-numSamplesPerPeriod
+        while residuals[i]<-(numSamplesPerPeriod/2):
+            residuals[i] = residuals[i]+numSamplesPerPeriod
+
+    result = (resampledSequences, periodHistory, driftHistory, shifts, globalShiftSolution[-1], residuals)
 
     return result
