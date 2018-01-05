@@ -70,7 +70,7 @@ def resampleImageSection(seq1, thisPeriod, newLength):
         result[i] = before * (1 - remainder) + after * remainder
     return result
 
-def crossCorrelationRolling(seq1, seq2, period1, period2, useTri=True, log=False,numSamplesPerPeriod=80):
+def crossCorrelationRolling(seq1, seq2, period1, period2, useTri=True, log=False, numSamplesPerPeriod=80):
 
     if log:
         # Outputs for toy examples
@@ -87,12 +87,10 @@ def crossCorrelationRolling(seq1, seq2, period1, period2, useTri=True, log=False
     origLen2 = len(seq2)
 
     #seq1, seq2 = matchSequenceSlicing(seq1,seq2)
-    seq1 = resampleImageSection(seq1, period1, numSamplesPerPeriod)
-    seq2 = resampleImageSection(seq2, period2, numSamplesPerPeriod)
-    #
-    # print(len(seq1),len(seq2))
-    # print(seq1[:,0,0])
-    # print(seq2[:,0,0])
+    if period1 != numSamplesPerPeriod:
+        seq1 = resampleImageSection(seq1, period1, numSamplesPerPeriod)
+    if period2 != numSamplesPerPeriod:
+        seq2 = resampleImageSection(seq2, period2, numSamplesPerPeriod)
 
     if log:
         # Outputs for toy examples
@@ -111,7 +109,6 @@ def crossCorrelationRolling(seq1, seq2, period1, period2, useTri=True, log=False
     scores = crossCorrelationScores(seq1, seq2)
 
     rollFactor, minVal = minimumScores(scores)
-    ## they are the same up to here
     rollFactor = (rollFactor/len(seq1))*origLen2
 
     alignment1 = np.roll(np.arange(0,origLen1),int(rollFactor))

@@ -29,7 +29,11 @@ def processNewReferenceSequence(rawRefFrames, thisPeriod, resampledSequences, pe
             minPos, minVal = scc.minimumScores(scores)
             shifts.append((i, len(resampledSequences)-1, minPos, minVal))
 
+    # pprint(shifts)
+
     (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts, len(resampledSequences), numSamplesPerPeriod, knownPhaseIndex, knownPhase)
+
+    # pprint(globalShiftSolution)
 
     residuals = np.zeros([len(globalShiftSolution),])
     for i in range(len(globalShiftSolution)-1):
@@ -62,15 +66,16 @@ def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, re
         # Compare this new sequence against other recent ones
         firstOne = max(0, len(resampledSequences) - maxOffsetToConsider - 1)
         for i in range(firstOne, len(resampledSequences)-1):
-            drift = driftHistory[i] - thisDrift
+            drift = thisDrift-driftHistory[i]
             seq1,seq2 = afd.matchFrames(resampledSequences[i][:numSamplesPerPeriod],thisResampledSequence[:numSamplesPerPeriod],drift)
-            seq1 = scc.makeArrayFromSequence(seq1)
-            seq2 = scc.makeArrayFromSequence(seq2)
-            scores = scc.crossCorrelationScores(seq1, seq2)
-            minPos, minVal = scc.minimumScores(scores)
-            shifts.append((i, len(resampledSequences)-1, minPos, minVal))
+            alignment0, alignment1, rF, score = scc.crossCorrelationRolling(seq1,seq2,80,80)
+            shifts.append((i, len(resampledSequences)-1, rF, score))
+
+    # pprint(shifts)
 
     (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts, len(resampledSequences), numSamplesPerPeriod, knownPhaseIndex, knownPhase)
+
+    # pprint(globalShiftSolution)
 
     residuals = np.zeros([len(globalShiftSolution),])
     for i in range(len(globalShiftSolution)-1):
