@@ -1,7 +1,8 @@
 import numpy as np
 from scipy.interpolate import interpn
 import math
-
+import matplotlib.pyplot as plt
+import getPhase as gtp
 import sys
 sys.path.insert(0, '../cjn-python-emulator/')
 import realTimeSync as rts
@@ -70,7 +71,7 @@ def resampleImageSection(seq1, thisPeriod, newLength):
         result[i] = before * (1 - remainder) + after * remainder
     return result
 
-def crossCorrelationRolling(seq1, seq2, period1, period2, useTri=True, log=False, numSamplesPerPeriod=80):
+def crossCorrelationRolling(seq1, seq2, period1, period2, useTri=False, log=False, numSamplesPerPeriod=80, target=0):
 
     if log:
         # Outputs for toy examples
@@ -107,19 +108,26 @@ def crossCorrelationRolling(seq1, seq2, period1, period2, useTri=True, log=False
     seq1 = makeArrayFromSequence(seq1[:numSamplesPerPeriod])
     seq2 = makeArrayFromSequence(seq2[:numSamplesPerPeriod])
     scores = crossCorrelationScores(seq1, seq2)
+    # f1 = plt.figure()
+    # a1 = f1.add_subplot(111)
+    # a1.plot(range(len(seq1)), scores)
 
-    rollFactor, minVal = minimumScores(scores)
+    rollFactor, minVal = minimumScores(scores,useTri=True)
     rollFactor = (rollFactor/len(seq1))*origLen2
 
-    alignment1 = np.roll(np.arange(0,origLen1),int(rollFactor))
+    # alignment1 = np.roll(np.arange(0,origLen1),int(rollFactor))
+    alignment1 = (np.arange(0,origLen1)-rollFactor)%origLen1
     alignment2 = np.arange(0,origLen2)
+
+    # rollFactor = gtp.getPhase(alignment1,alignment2,target,log)
+
     # Here we roll seq1 for consistency with nCascadingNW.py
     if log:
         print('Alignment 1:\t{0}'.format(alignment1))
         print('Alignment 2:\t{0}'.format(alignment2))
         print('Rolled by {0}'.format(rollFactor))
     # convert to list for consistency with nCascadingNW.py
-    return list(alignment1), list(alignment2), rollFactor, minVal
+    return list(alignment1), list(alignment2), (target+rollFactor)%origLen2, minVal
 
 
 def makeArrayFromSequence(seq):

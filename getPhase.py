@@ -70,7 +70,7 @@ def getPhase(alignment1,alignment2,phase,log=False):
 
     ## Map precise index to alignment2, considering gaps
     # case where phase captured in alignment1 is integer and valid in alignment2
-    if (idxPos//1)==idxPos and alignment2[int(idxPos)]>=0:
+    if (idxPos//1)==idxPos and idxPos<len(alignment2) and alignment2[int(idxPos)]>=0:# TODO note that the middle criterion is needed because scc alignments may not be the same length!
         if log:
             print('Exact index used in alignment 2 to give a phase of {0}'.format(phase))
             # print(alignment2[int(idxPos)])
@@ -84,7 +84,7 @@ def getPhase(alignment1,alignment2,phase,log=False):
         # check not same value (occurs when exactly hits an index)
         if a2l==a2u:
             a2u+=1
-        while alignment2[a2l]<0:
+        while alignment2[a2l%s2len]<0:
             a2l = a2l-1
         while alignment2[a2u%s2len]<0:
             a2u = a2u+1
