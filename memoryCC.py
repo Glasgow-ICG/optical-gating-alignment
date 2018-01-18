@@ -14,6 +14,8 @@ def processNewReferenceSequence(rawRefFrames, thisPeriod, resampledSequences, pe
     #Stolen from JT but simplified/adapted
     # here rawRefFrames is a PxMxN numpy array representing the new raw reference frames
 
+    rawRefFrames = np.asarray(rawRefFrames)
+
     # Add latest reference frames to our sequence set
     thisResampledSequence = scc.resampleImageSection(rawRefFrames, thisPeriod, numSamplesPerPeriod)
     resampledSequences.append(thisResampledSequence)
@@ -33,11 +35,13 @@ def processNewReferenceSequence(rawRefFrames, thisPeriod, resampledSequences, pe
             else:
                 alignment1, alignment2, targ, score = scc.crossCorrelationRolling(resampledSequences[knownPhaseIndex],resampledSequences[i],80,80,target=knownPhase)
                 if log:
+                    print(score)
                     print('Using target of {0}'.format(targ))
             alignment0, alignment1, rF, score = scc.crossCorrelationRolling(resampledSequences[i][:numSamplesPerPeriod],thisResampledSequence[:numSamplesPerPeriod],80,80,target=targ)
             shifts.append((i, len(resampledSequences)-1, rF-targ, score))
 
-    # pprint(shifts)
+    pprint(shifts)
+    print(len(resampledSequences), numSamplesPerPeriod, knownPhaseIndex, knownPhase)
 
     (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts, len(resampledSequences), numSamplesPerPeriod, knownPhaseIndex, knownPhase)
 
@@ -62,6 +66,8 @@ def processNewReferenceSequence(rawRefFrames, thisPeriod, resampledSequences, pe
 def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, resampledSequences, periodHistory, driftHistory, shifts, knownPhaseIndex=0, knownPhase=0, numSamplesPerPeriod=80, maxOffsetToConsider=2, log=False):
     #Stolen from JT but simplified/adapted
     # here rawRefFrames is a PxMxN numpy array representing the new raw reference frames
+
+    rawRefFrames = np.asarray(rawRefFrames)
 
     # Resample latest reference frames and add them to our sequence set
     thisResampledSequence = scc.resampleImageSection(rawRefFrames, thisPeriod, numSamplesPerPeriod)
@@ -112,3 +118,33 @@ def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, re
     result = (resampledSequences, periodHistory, driftHistory, shifts, globalShiftSolution[-1], residuals)
 
     return result
+
+if __name__ == '__main__':
+    print('Running toy example...This is BROKEN')
+    numStacks = 10
+    stackLength = 10
+    width = 10
+    height = 10
+
+    resampledSequences = []
+    periodHistory = []
+    shifts = []
+
+    for i in range(numStacks):
+        print('Stack {0}'.format(i))
+        # Make new toy sequence
+        thisPeriod = stackLength-0.5
+        seq1 = (np.arange(stackLength)+np.random.randint(0,stackLength+1))%thisPeriod
+        print('New Sequence: {0}; Period: {1} ({2})'.format(seq1,thisPeriod,len(seq1)))
+        seq2  = np.asarray(seq1,'uint8').reshape([len(seq1),1,1])
+        seq2 = np.repeat(np.repeat(seq2,width,1),height,2)
+
+        # Run MCC
+        resampledSequences, periodHistory, shifts, rF, residuals = processNewReferenceSequence(seq2, thisPeriod, resampledSequences, periodHistory, shifts, knownPhaseIndex=0, knownPhase=stackLength/2, numSamplesPerPeriod=80, maxOffsetToConsider=3, log=True)
+
+        print(thisPeriod*rF/80)
+
+        # Outputs for toy examples
+        seqOut = (seq1+rF)%thisPeriod
+        print('Aligned Sequence: {0}'.format(seqOut))
+        print('---')
