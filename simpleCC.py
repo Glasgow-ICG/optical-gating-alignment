@@ -59,7 +59,7 @@ def matchSequenceSlicing(seq1,seq2):
 def resampleImageSection(seq1, thisPeriod, newLength):
     #trimmed down version of JTs periods.ResampleImageSection
 
-    result = np.zeros([newLength,seq1.shape[1],seq1.shape[2]],'float')
+    result = np.zeros([newLength,seq1.shape[1],seq1.shape[2]])
     for i in range(newLength):
         desiredPos = (i / float(newLength)) * thisPeriod
         beforePos = int(desiredPos)

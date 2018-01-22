@@ -67,7 +67,8 @@ def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, re
     #Stolen from JT but simplified/adapted
     # here rawRefFrames is a PxMxN numpy array representing the new raw reference frames
 
-    rawRefFrames = np.asarray(rawRefFrames)
+    if type(rawRefFrames) is list:
+        rawRefFrames = np.vstack(rawRefFrames)
 
     # Resample latest reference frames and add them to our sequence set
     thisResampledSequence = scc.resampleImageSection(rawRefFrames, thisPeriod, numSamplesPerPeriod)
@@ -129,6 +130,7 @@ if __name__ == '__main__':
     resampledSequences = []
     periodHistory = []
     shifts = []
+    driftHistory = []
 
     for i in range(numStacks):
         print('Stack {0}'.format(i))
@@ -140,7 +142,7 @@ if __name__ == '__main__':
         seq2 = np.repeat(np.repeat(seq2,width,1),height,2)
 
         # Run MCC
-        resampledSequences, periodHistory, shifts, rF, residuals = processNewReferenceSequence(seq2, thisPeriod, resampledSequences, periodHistory, shifts, knownPhaseIndex=0, knownPhase=stackLength/2, numSamplesPerPeriod=80, maxOffsetToConsider=3, log=True)
+        resampledSequences, periodHistory, driftHistory, shifts, rF, residuals = processNewReferenceSequenceWithDrift(seq2, thisPeriod, [0,0], resampledSequences, periodHistory, driftHistory, shifts, knownPhaseIndex=0, knownPhase=stackLength/2, numSamplesPerPeriod=80, maxOffsetToConsider=3, log=True)
 
         print(thisPeriod*rF/80)
 
