@@ -63,7 +63,7 @@ def processNewReferenceSequence(rawRefFrames, thisPeriod, resampledSequences, pe
 
     return result
 
-def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, resampledSequences, periodHistory, driftHistory, shifts, knownPhaseIndex=0, knownPhase=0, numSamplesPerPeriod=80, maxOffsetToConsider=2, log=False):
+def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, resampledSequences, periodHistory, driftHistory, shifts, knownPhaseIndex=0, knownPhase=0, numSamplesPerPeriod=80, maxOffsetToConsider=2, log=True):
     #Stolen from JT but simplified/adapted
     # here rawRefFrames is a PxMxN numpy array representing the new raw reference frames
 
