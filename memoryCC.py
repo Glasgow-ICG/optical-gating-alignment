@@ -98,11 +98,13 @@ def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, re
             alignment1, alignment2, rollFactor, score = scc.crossCorrelationRolling(seq1,seq2,80,80,target=targ)
             shifts.append((i, len(resampledSequences)-1, rollFactor-targ, score))
 
-    # pprint(shifts)
+    if (log):
+        pprint(shifts)
 
     (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts, len(resampledSequences), numSamplesPerPeriod, knownPhaseIndex, knownPhase)
 
-    # pprint(globalShiftSolution)
+    if (log):
+        pprint(globalShiftSolution)
 
     residuals = np.zeros([len(globalShiftSolution),])
     for i in range(len(globalShiftSolution)-1):
