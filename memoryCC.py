@@ -99,11 +99,12 @@ def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, re
         rawRefFrames = np.vstack(rawRefFrames)
 
     # Check that the reference frames we have been given are compatible in shape with the history that we already have
-    for seq in resampledSequences:
-        for f in seq:
-            if rawRefFrames[0].shape != f.image.shape:
-                # There is a mismatch. Return an error code to indicate the problem
-                return (resampledSequences, periodHistory, shifts, -1000.0)
+    if len(resampledSequences)>1:
+        for seq in resampledSequences:
+            for f in seq:
+                if rawRefFrames[0].shape != f.image.shape:
+                    # There is a mismatch. Return an error code to indicate the problem
+                    return (resampledSequences, periodHistory, shifts, -1000.0)
 
     # Resample latest reference frames and add them to our sequence set
     thisResampledSequence = scc.resampleImageSection(rawRefFrames, thisPeriod, numSamplesPerPeriod)
