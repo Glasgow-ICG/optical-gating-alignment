@@ -12,9 +12,26 @@ import shifts_global_solution as sgs
 
 def processNewReferenceSequence(rawRefFrames, thisPeriod, resampledSequences, periodHistory, shifts, knownPhaseIndex=0, knownPhase=0, numSamplesPerPeriod=80, maxOffsetToConsider=2, log=False):
     #Stolen from JT but simplified/adapted
-    # here rawRefFrames is a PxMxN numpy array representing the new raw reference frames
+    # rawRefFrames: a PxMxN numpy array representing the new raw reference frames (or a list of numpy arrays representing the new raw reference frames)
+    # thisPeriod: the period for the frames in rawRefFrames (caller must determine this)
+    # knownPhaseIndex: the index into resampledSequences for which we have a known phase point we are trying to match
+    # knownPhase: the phase we are trying to match
+    # periodHistory: a list of the periods for resampledSequences
+    # shifts: a list of all the shifts we have already calculated within resampledSequences
+    # numSamplesPerPeriod: number of samples to use in uniform resampling of the period of data
+    # maxOffsetToConsider: how far apart in the resampledSequences list to make comparisons
+    #                      (this should be used to prevent comparing between sequences that are so far apart they have very little similarity)
 
-    rawRefFrames = np.asarray(rawRefFrames)
+    # Deal with rawRefFrames type
+    if type(rawRefFrames) is list:
+        rawRefFrames = np.vstack(rawRefFrames)
+
+    # Check that the reference frames we have been given are compatible in shape with the history that we already have
+    for seq in resampledSequences:
+        for f in seq:
+            if rawRefFrames[0].shape != f.image.shape:
+                # There is a mismatch. Return an error code to indicate the problem
+                return (resampledSequences, periodHistory, shifts, -1000.0)
 
     # Add latest reference frames to our sequence set
     thisResampledSequence = scc.resampleImageSection(rawRefFrames, thisPeriod, numSamplesPerPeriod)
@@ -33,12 +50,12 @@ def processNewReferenceSequence(rawRefFrames, thisPeriod, resampledSequences, pe
                     print('Using knownPhase of {0}'.format(knownPhase))
                 targ = knownPhase
             else:
-                alignment1, alignment2, targ, score = scc.crossCorrelationRolling(resampledSequences[knownPhaseIndex],resampledSequences[i],80,80,target=knownPhase)
+                alignment1, alignment2, targ, score = scc.crossCorrelationRolling(resampledSequences[knownPhaseIndex],resampledSequences[i],numSamplesPerPeriod,numSamplesPerPeriod,target=knownPhase)
                 if log:
                     print(score)
                     print('Using target of {0}'.format(targ))
-            alignment0, alignment1, rF, score = scc.crossCorrelationRolling(resampledSequences[i][:numSamplesPerPeriod],thisResampledSequence[:numSamplesPerPeriod],80,80,target=targ)
-            shifts.append((i, len(resampledSequences)-1, rF-targ, score))
+            alignment0, alignment1, rF, score = scc.crossCorrelationRolling(resampledSequences[i][:numSamplesPerPeriod],thisResampledSequence[:numSamplesPerPeriod],numSamplesPerPeriod,numSamplesPerPeriod,target=targ)
+            shifts.append((i, len(resampledSequences)-1, (rF-targ)%numSamplesPerPeriod, score))
 
     pprint(shifts)
     print(len(resampledSequences), numSamplesPerPeriod, knownPhaseIndex, knownPhase)
@@ -65,10 +82,28 @@ def processNewReferenceSequence(rawRefFrames, thisPeriod, resampledSequences, pe
 
 def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, resampledSequences, periodHistory, driftHistory, shifts, knownPhaseIndex=0, knownPhase=0, numSamplesPerPeriod=80, maxOffsetToConsider=2, log=True):
     #Stolen from JT but simplified/adapted
-    # here rawRefFrames is a PxMxN numpy array representing the new raw reference frames
+    # rawRefFrames: a PxMxN numpy array representing the new raw reference frames (or a list of numpy arrays representing the new raw reference frames)
+    # thisPeriod: the period for the frames in rawRefFrames (caller must determine this)
+    # thisDrift: the drift for the frames in rawRefFrames (caller must determine this)
+    # knownPhaseIndex: the index into resampledSequences for which we have a known phase point we are trying to match
+    # knownPhase: the phase we are trying to match
+    # periodHistory: a list of the periods for resampledSequences
+    # driftHistory: a list of the drifts for resampledSequences
+    # shifts: a list of all the shifts we have already calculated within resampledSequences
+    # numSamplesPerPeriod: number of samples to use in uniform resampling of the period of data
+    # maxOffsetToConsider: how far apart in the resampledSequences list to make comparisons
+    #                      (this should be used to prevent comparing between sequences that are so far apart they have very little similarity)
 
+    # Deal with rawRefFrames type
     if type(rawRefFrames) is list:
         rawRefFrames = np.vstack(rawRefFrames)
+
+    # Check that the reference frames we have been given are compatible in shape with the history that we already have
+    for seq in resampledSequences:
+        for f in seq:
+            if rawRefFrames[0].shape != f.image.shape:
+                # There is a mismatch. Return an error code to indicate the problem
+                return (resampledSequences, periodHistory, shifts, -1000.0)
 
     # Resample latest reference frames and add them to our sequence set
     thisResampledSequence = scc.resampleImageSection(rawRefFrames, thisPeriod, numSamplesPerPeriod)
@@ -90,13 +125,13 @@ def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, re
             else:
                 drift = [driftHistory[i][0]-driftHistory[knownPhaseIndex][0], driftHistory[i][1]-driftHistory[knownPhaseIndex][1]]
                 seq1,seq2 = afd.matchFrames(resampledSequences[knownPhaseIndex],resampledSequences[i],drift)
-                alignment1, alignment2, targ, score = scc.crossCorrelationRolling(seq1,seq2,80,80,target=knownPhase)
+                alignment1, alignment2, targ, score = scc.crossCorrelationRolling(seq1,seq2,numSamplesPerPeriod,numSamplesPerPeriod,target=knownPhase)
                 if log:
                     print('Using target of {0}'.format(targ))
             drift = [thisDrift[0]-driftHistory[i][0], thisDrift[1]-driftHistory[i][1]]
             seq1,seq2 = afd.matchFrames(resampledSequences[i],resampledSequences[-1],drift)
-            alignment1, alignment2, rollFactor, score = scc.crossCorrelationRolling(seq1,seq2,80,80,target=targ)
-            shifts.append((i, len(resampledSequences)-1, rollFactor-targ, score))
+            alignment1, alignment2, rollFactor, score = scc.crossCorrelationRolling(seq1,seq2,numSamplesPerPeriod,numSamplesPerPeriod,target=targ)
+            shifts.append((i, len(resampledSequences)-1, (rollFactor-targ)%numSamplesPerPeriod, score))
 
     if (log):
         pprint(shifts)
@@ -104,6 +139,7 @@ def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, re
     (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts, len(resampledSequences), numSamplesPerPeriod, knownPhaseIndex, knownPhase)
 
     if (log):
+        print('solution:')
         pprint(globalShiftSolution)
 
     residuals = np.zeros([len(globalShiftSolution),])
@@ -117,6 +153,10 @@ def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, re
             residuals[i] = residuals[i]-numSamplesPerPeriod
         while residuals[i]<-(numSamplesPerPeriod/2):
             residuals[i] = residuals[i]+numSamplesPerPeriod
+
+    if log:
+        print('residuals:')
+        pprint(residuals)
 
     result = (resampledSequences, periodHistory, driftHistory, shifts, globalShiftSolution[-1], residuals)
 
