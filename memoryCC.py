@@ -102,7 +102,7 @@ def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, re
     if len(resampledSequences)>1:
         for seq in resampledSequences:
             for f in seq:
-                if rawRefFrames[0].shape != f.image.shape:
+                if rawRefFrames[0].shape != f.shape:
                     # There is a mismatch. Return an error code to indicate the problem
                     return (resampledSequences, periodHistory, shifts, -1000.0)
 
