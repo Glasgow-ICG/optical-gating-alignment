@@ -84,7 +84,7 @@ def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, re
     #Stolen from JT but simplified/adapted
     # rawRefFrames: a PxMxN numpy array representing the new raw reference frames (or a list of numpy arrays representing the new raw reference frames)
     # thisPeriod: the period for the frames in rawRefFrames (caller must determine this)
-    # thisDrift: the drift for the frames in rawRefFrames (caller must determine this)
+    # thisDrift: the drift for the frames in rawRefFrames (caller must determine this) --- NB Assumes this is reset after each stack (see accumulation below)
     # knownPhaseIndex: the index into resampledSequences for which we have a known phase point we are trying to match
     # knownPhase: the phase we are trying to match
     # periodHistory: a list of the periods for resampledSequences
@@ -110,7 +110,10 @@ def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, re
     thisResampledSequence = scc.resampleImageSection(rawRefFrames, thisPeriod, numSamplesPerPeriod)
     resampledSequences.append(thisResampledSequence)
     periodHistory.append(thisPeriod)
-    driftHistory.append(thisDrift)
+    if len(driftHistory)>0
+        driftHistory.append([driftHistory[-1][0]+thisDrift[0],driftHistory[-1][1]+thisDrift[1]])# NB Accumulates drift
+    else:
+        driftHistory.append(thisDrift)
 
     # Update our shifts array, comparing the current sequence with recent previous ones
     if (len(resampledSequences) > 1):
@@ -129,8 +132,8 @@ def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, re
                 alignment1, alignment2, targ, score = scc.crossCorrelationRolling(seq1,seq2,numSamplesPerPeriod,numSamplesPerPeriod,target=knownPhase)
                 if log:
                     print('Using target of {0}'.format(targ))
-            drift = [thisDrift[0]-driftHistory[i][0], thisDrift[1]-driftHistory[i][1]]
-            seq1,seq2 = afd.matchFrames(resampledSequences[i],resampledSequences[-1],drift)
+            # drift = [thisDrift[0]-driftHistory[i][0], thisDrift[1]-driftHistory[i][1]] # NB not needed as thisDrift is NOT accumulated
+            seq1,seq2 = afd.matchFrames(resampledSequences[i],resampledSequences[-1],thisDrift)
             alignment1, alignment2, rollFactor, score = scc.crossCorrelationRolling(seq1,seq2,numSamplesPerPeriod,numSamplesPerPeriod,target=targ)
             shifts.append((i, len(resampledSequences)-1, (rollFactor-targ)%numSamplesPerPeriod, score))
 
