@@ -2,10 +2,6 @@ import numpy as np
 import math
 import scipy.interpolate as spi
 from pprint import pprint
-import matplotlib.pyplot as plt
-#np.set_printoptions(threshold=np.nan)
-# np.set_printoptions(formatter={'float_kind': lambda x: "{0:0.0f}\t".format(x)})
-import getPhase as gtp
 import sys
 sys.path.insert(0, '../py_sad_correlation/')
 import j_py_sad_correlation as jps
@@ -59,7 +55,7 @@ def interpImageSeriesZ(sequence,period,interp):
 #
 #     return sequence
 
-def nCascadingNWA(seq1,seq2,period1,period2,target=0,gapPenalty=0,interp=1,log=False):
+def nCascadingNWA(seq1,seq2,period1,period2,gapPenalty=0,interp=1,log=False):
     ''' Assumes seq1 and seq2 are 3D numpy arrays of [t,x,y]'''
     if log:
         print('Sequence #1 has {0} frames and sequence #2 has {1} frames;'.format(len(seq1),len(seq2)))
@@ -109,11 +105,7 @@ def nCascadingNWA(seq1,seq2,period1,period2,target=0,gapPenalty=0,interp=1,log=F
     # Pick Cascade and Roll Seq1
     rollFactor = np.argmax(cascades[len(seq2),len(seq1),:])
     score = np.amax(cascades[len(seq2),len(seq1),:])
-    # f1 = plt.figure()
-    # a1 = f1.add_subplot(111)
-    # a1.plot(cascades[len(seq2),len(seq1),:])
-    # a1.scatter(rollFactor,score,s=80,c='k')
-    # print(score,np.iinfo(seq1.dtype).max,seq1.size)
+
     score = (score + (np.iinfo(seq1.dtype).max * seq1.size/10))/(np.iinfo(seq1.dtype).max * seq1.size/10)
     if score<=0:
         print('ISSUE: Negative Score')
@@ -198,18 +190,14 @@ def nCascadingNWA(seq1,seq2,period1,period2,target=0,gapPenalty=0,interp=1,log=F
             print('De-interpolating for result...')
         alignment1[alignment1>=0] = (alignment1[alignment1>=0]/interp)%(period1-1)
         alignment2[alignment2>=0] = (alignment2[alignment2>=0]/interp)%(period2-1)
-        # rollFactor = rollFactor/interp
+        rollFactor = rollFactor/interp
 
     if log:
         print('Aligned sequence #1 (wrapped):\t\t',alignment1)
 
     for i in range(len(alignment1)):
         if alignment1[i]>-1:
-            alignment1[i] = (alignment1[i]-rollFactor)%(period1)
-
-    # get rollFactor properly
-    # print(target,alignment1)
-    rollFactor = gtp.getPhase(alignment1,alignment2,target,log)
+            alignment1[i] = (alignment1[i]-rollFactor)%(period1-1)
 
     if log:
         print('Aligned sequence #1 (unwrapped):\t',alignment1)

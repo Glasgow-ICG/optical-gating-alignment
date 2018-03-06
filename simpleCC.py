@@ -1,9 +1,10 @@
 import numpy as np
 from scipy.interpolate import interpn
 import math
-import matplotlib.pyplot as plt
-import getPhase as gtp
+
 import sys
+sys.path.insert(0, '../j_postacquisition/')
+import periods as jpp
 sys.path.insert(0, '../cjn-python-emulator/')
 import realTimeSync as rts
 
@@ -27,11 +28,11 @@ def minimumScores(scores,useTri=True):
         y2 = scores[np.argmin(scores)]
         y3 = scores[(np.argmin(scores)+1) % len(scores)]
         minPos, minVal = rts.threePointTriangularMinimum(y1,y2,y3)
-        minPos = (minPos + np.argmin(scores)) % len(scores)
     else:
         # just use minimum
         minPos = np.argmin(scores)
-        minVal = np.min(scores)
+
+    minPos = (minPos + np.argmin(scores)) % len(scores)
 
     return minPos, minVal
 
@@ -59,7 +60,7 @@ def matchSequenceSlicing(seq1,seq2):
 def resampleImageSection(seq1, thisPeriod, newLength):
     #trimmed down version of JTs periods.ResampleImageSection
 
-    result = np.zeros([newLength,seq1.shape[1],seq1.shape[2]])
+    result = np.zeros([newLength,seq1.shape[1],seq1.shape[2]],'float')
     for i in range(newLength):
         desiredPos = (i / float(newLength)) * thisPeriod
         beforePos = int(desiredPos)
@@ -108,18 +109,12 @@ def crossCorrelationRolling(seq1, seq2, period1, period2, useTri=False, log=Fals
     seq1 = makeArrayFromSequence(seq1[:numSamplesPerPeriod])
     seq2 = makeArrayFromSequence(seq2[:numSamplesPerPeriod])
     scores = crossCorrelationScores(seq1, seq2)
-    # f1 = plt.figure()
-    # a1 = f1.add_subplot(111)
-    # a1.plot(range(len(seq1)), scores)
 
     rollFactor, minVal = minimumScores(scores,useTri=True)
     rollFactor = (rollFactor/len(seq1))*origLen2
 
-    # alignment1 = np.roll(np.arange(0,origLen1),int(rollFactor))
     alignment1 = (np.arange(0,origLen1)-rollFactor)%origLen1
     alignment2 = np.arange(0,origLen2)
-
-    # rollFactor = gtp.getPhase(alignment1,alignment2,target,log)
 
     # Here we roll seq1 for consistency with nCascadingNW.py
     if log:
@@ -137,6 +132,7 @@ def makeArrayFromSequence(seq):
     for i in range(len(seq)):
         result[i] = np.array(seq[i], copy=False).flatten()
     return result
+
 
 if __name__ == '__main__':
     print('Running toy example with')
