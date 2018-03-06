@@ -110,7 +110,7 @@ def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, re
     thisResampledSequence = scc.resampleImageSection(rawRefFrames, thisPeriod, numSamplesPerPeriod)
     resampledSequences.append(thisResampledSequence)
     periodHistory.append(thisPeriod)
-    if len(driftHistory)>0
+    if len(driftHistory)>0:
         driftHistory.append([driftHistory[-1][0]+thisDrift[0],driftHistory[-1][1]+thisDrift[1]])# NB Accumulates drift
     else:
         driftHistory.append(thisDrift)
