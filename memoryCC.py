@@ -10,7 +10,7 @@ sys.path.insert(0, '../j_postacquisition/')
 import shifts as shf
 import shifts_global_solution as sgs
 
-def processNewReferenceSequence(rawRefFrames, thisPeriod, resampledSequences, periodHistory, shifts, knownPhaseIndex=0, knownPhase=0, numSamplesPerPeriod=80, maxOffsetToConsider=2, log=False):
+def processNewReferenceSequence(rawRefFrames, thisPeriod, thisDrift, resampledSequences, periodHistory, driftHistory, shifts, knownPhaseIndex=0, knownPhase=0, numSamplesPerPeriod=80, maxOffsetToConsider=2, log=True):
     #Stolen from JT but simplified/adapted
     # rawRefFrames: a PxMxN numpy array representing the new raw reference frames (or a list of numpy arrays representing the new raw reference frames)
     # thisPeriod: the period for the frames in rawRefFrames (caller must determine this)
@@ -76,7 +76,7 @@ def processNewReferenceSequence(rawRefFrames, thisPeriod, resampledSequences, pe
         while residuals[i]<-(numSamplesPerPeriod/2):
             residuals[i] = residuals[i]+numSamplesPerPeriod
 
-    result = (resampledSequences, periodHistory, shifts, globalShiftSolution[-1], residuals)
+    result = (resampledSequences, periodHistory, driftHistory, shifts, globalShiftSolution[-1], residuals)
 
     return result
 
