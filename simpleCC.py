@@ -66,9 +66,10 @@ def resampleImageSection(seq1, thisPeriod, newLength):
         beforePos = int(desiredPos)
         afterPos = beforePos + 1
         remainder = (desiredPos - beforePos) / float(afterPos - beforePos)
+        print(i,beforePos,afterPos,remainder)
 
         before = seq1[beforePos]
-        after = seq1[int(afterPos%math.ceil(thisPeriod))]#this is different to JT
+        after = seq1[int(afterPos%thisPeriod)]#this is different to JT
         result[i] = before * (1 - remainder) + after * remainder
     return result
 
