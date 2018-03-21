@@ -1,6 +1,0 @@
-All from: arithmicish_heart_bf
-
-seq0 - first identified full beat using getPeriod.py (after referenceFrames)
-seq1 - first identified full beat after ~2/3pi frames using getPeriod.py (pi taken from seq0)
-seq2 - second identified full beat using getPeriod.py (i.e. after ~3pi where pi is taken from seq0)
-seq3 - last identified full beat using getPeriod.py (i.e. after lastFrame-2pi, where pi is taken from seq0)

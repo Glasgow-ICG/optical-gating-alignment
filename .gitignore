@@ -1,4 +1,4 @@
-# **/localdata/
+**/localdata/
 **/__pycache__/
 *.pyc
 test.py
