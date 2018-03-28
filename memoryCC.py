@@ -27,11 +27,12 @@ def processNewReferenceSequence(rawRefFrames, thisPeriod, thisDrift, resampledSe
         rawRefFrames = np.vstack(rawRefFrames)
 
     # Check that the reference frames we have been given are compatible in shape with the history that we already have
-    for seq in resampledSequences:
-        for f in seq:
-            if rawRefFrames[0].shape != f.image.shape:
-                # There is a mismatch. Return an error code to indicate the problem
-                return (resampledSequences, periodHistory, shifts, -1000.0)
+    if len(resampledSequences)>1:
+        for seq in resampledSequences:
+            for f in seq:
+                if rawRefFrames[0].shape != f.shape:
+                    # There is a mismatch. Return an error code to indicate the problem
+                    return (resampledSequences, periodHistory, shifts, -1000.0)
 
     # Add latest reference frames to our sequence set
     thisResampledSequence = scc.resampleImageSection(rawRefFrames, thisPeriod, numSamplesPerPeriod)
@@ -57,12 +58,7 @@ def processNewReferenceSequence(rawRefFrames, thisPeriod, thisDrift, resampledSe
             alignment0, alignment1, rF, score = scc.crossCorrelationRolling(resampledSequences[i][:numSamplesPerPeriod],thisResampledSequence[:numSamplesPerPeriod],numSamplesPerPeriod,numSamplesPerPeriod,target=targ)
             shifts.append((i, len(resampledSequences)-1, (rF-targ)%numSamplesPerPeriod, score))
 
-    pprint(shifts)
-    print(len(resampledSequences), numSamplesPerPeriod, knownPhaseIndex, knownPhase)
-
     (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts, len(resampledSequences), numSamplesPerPeriod, knownPhaseIndex, knownPhase, log)
-
-    # pprint(globalShiftSolution)
 
     residuals = np.zeros([len(globalShiftSolution),])
     for i in range(len(globalShiftSolution)-1):
