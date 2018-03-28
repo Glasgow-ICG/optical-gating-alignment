@@ -60,7 +60,7 @@ def processNewReferenceSequence(rawRefFrames, thisPeriod, thisDrift, resampledSe
     pprint(shifts)
     print(len(resampledSequences), numSamplesPerPeriod, knownPhaseIndex, knownPhase)
 
-    (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts, len(resampledSequences), numSamplesPerPeriod, knownPhaseIndex, knownPhase)
+    (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts, len(resampledSequences), numSamplesPerPeriod, knownPhaseIndex, knownPhase, log)
 
     # pprint(globalShiftSolution)
 
@@ -140,7 +140,7 @@ def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, re
     if (log):
         pprint(shifts)
 
-    (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts, len(resampledSequences), numSamplesPerPeriod, knownPhaseIndex, knownPhase)
+    (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts, len(resampledSequences), numSamplesPerPeriod, knownPhaseIndex, knownPhase, log)
 
     if (log):
         print('solution:')

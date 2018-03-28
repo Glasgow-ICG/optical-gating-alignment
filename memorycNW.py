@@ -36,7 +36,7 @@ def processNewReferenceSequence(rawRefFrames, thisPeriod, resampledSequences, pe
             alignment1, alignment2, rollFactor, score = cnw.nCascadingNWA(resampledSequences[i],rawRefFrames,periodHistory[i],thisPeriod,target=targ)
             shifts.append((i, len(resampledSequences)-1, rollFactor-targ, score))
 
-    (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts, len(resampledSequences), periodHistory, knownPhaseIndex, knownPhase)
+    (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts, len(resampledSequences), periodHistory, knownPhaseIndex, knownPhase, log)
 
     residuals = np.zeros([len(globalShiftSolution),])
     for i in range(len(globalShiftSolution)-1):
@@ -85,7 +85,7 @@ def processNewReferenceSequenceWithDrift(rawRefFrames, thisPeriod, thisDrift, re
             alignment1, alignment2, rollFactor, score = cnw.nCascadingNWA(seq1,seq2,periodHistory[i],thisPeriod,target=targ)
             shifts.append((i, len(resampledSequences)-1, rollFactor-targ, score))
 
-    (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts, len(resampledSequences), periodHistory, knownPhaseIndex, knownPhase)
+    (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts, len(resampledSequences), periodHistory, knownPhaseIndex, knownPhase, log)
 
     residuals = np.zeros([len(globalShiftSolution),])
     for i in range(len(globalShiftSolution)-1):
