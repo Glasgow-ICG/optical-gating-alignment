@@ -1,4 +1,5 @@
 '''Modules for maintaining phase lock during time-lapse imaging.
+Based on inter-frame cross-correlation between reference sets.
 Each new reference frame sequence should be processed after determination.
 This module can correct for known drift between sequences.'''
 
@@ -33,7 +34,7 @@ def processNewReferenceSequence(rawRefFrames,
     * thisPeriod: the period for rawRefFrames (caller must determine this)
     * thisDrift: the drift for rawRefFrames (caller must determine this)
       * if None no drift correction is used
-    * resamplesSequences: a list of resampled, previous reference frames
+    * resampledSequences: a list of resampled, previous reference frames
     * periodHistory: a list of the previous periods for resampledSequences
     * driftHistory: a list of the previous drifts for resampledSequences
       * if no drift correction is used, this is a dummy variable
@@ -153,7 +154,7 @@ def processNewReferenceSequence(rawRefFrames,
                            (rollFactor-targ) % numSamplesPerPeriod,
                            score))
 
-    if (log):
+    if log:
         pprint(shifts)
 
     (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts,
@@ -163,7 +164,7 @@ def processNewReferenceSequence(rawRefFrames,
                                                                                                                                 knownPhase,
                                                                                                                                 log)
 
-    if (log):
+    if log:
         print('solution:')
         pprint(globalShiftSolution)
 
@@ -182,7 +183,8 @@ def processNewReferenceSequence(rawRefFrames,
         print('residuals:')
         pprint(residuals)
 
-    # Note that there are two other return statements in this function
+    # Note for developers:
+    # there are two other return statements in this function
     return (resampledSequences,
             periodHistory,
             driftHistory,
