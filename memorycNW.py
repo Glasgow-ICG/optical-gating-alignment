@@ -7,6 +7,7 @@ This module can correct for known drift between sequences.'''
 import numpy as np
 from pprint import pprint
 import sys
+import warnings
 # Local Imports
 import nCascadingNW as cnw
 import accountForDrift as afd
@@ -96,7 +97,7 @@ def processNewReferenceSequence(rawRefFrames,
             driftHistory.append(thisDrift)
     else:
         if log:
-            print('No drift correction is being applied. This will seriously impact phase locking.')
+            warnings.warn('No drift correction is being applied. This will seriously impact phase locking.',stacklevel=3)
 
     # Update our shifts array.
     # Compare the current sequence with recent previous ones
