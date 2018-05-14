@@ -5,8 +5,6 @@ This module includes all necessary functions.'''
 import numpy as np
 from scipy.interpolate import interpn
 import sys
-import os
-print(os.getcwd())
 # Local Imports
 sys.path.insert(0, '../cjn-python-emulator/')
 import realTimeSync as rts

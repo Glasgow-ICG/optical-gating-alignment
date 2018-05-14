@@ -9,6 +9,7 @@ from pprint import pprint
 import sys
 import warnings
 # Local Imports
+import simpleCC as scc
 import nCascadingNW as cnw
 import accountForDrift as afd
 sys.path.insert(0, '../j_postacquisition/')
@@ -86,8 +87,13 @@ def processNewReferenceSequence(rawRefFrames,
                     None)
 
     # Add latest reference frames to our sequence set
-    sequenceHistory.append(rawRefFrames)
-    periodHistory.append(thisPeriod)
+    thisResampledSequence = scc.resampleImageSection(rawRefFrames,
+                                                     thisPeriod,
+                                                     80)
+    thisResampledSequence = thisResampledSequence.astype('uint8')
+    sequenceHistory.append(thisResampledSequence)
+    periodHistory.append(80)
+    
     if thisDrift is not None:
         if len(driftHistory) > 0:
             # Accumulate the drift throughout history
@@ -117,6 +123,7 @@ def processNewReferenceSequence(rawRefFrames,
                                                                             sequenceHistory[i],
                                                                             periodHistory[knownPhaseIndex],
                                                                             periodHistory[i],
+                                                                            log=log,
                                                                             target=knownPhase)
                 else:
                     drift = [driftHistory[i][0]-driftHistory[knownPhaseIndex][0],
@@ -128,38 +135,42 @@ def processNewReferenceSequence(rawRefFrames,
                                                                             seq2,
                                                                             periodHistory[knownPhaseIndex],
                                                                             periodHistory[i],
+                                                                            log=log,
                                                                             target=knownPhase)
                 if log:
                     print('Using target of {0}'.format(targ))
             if thisDrift is None:
                 alignment1, alignment2, rollFactor, score = cnw.nCascadingNWA(sequenceHistory[i],
-                                                                              rawRefFrames,
+                                                                              sequenceHistory[-1],
                                                                               periodHistory[i],
-                                                                              thisPeriod,
+                                                                              periodHistory[-1],
+                                                                              log=log,
                                                                               target=targ)
             else:
                 seq1, seq2 = afd.matchFrames(sequenceHistory[i],
-                                             rawRefFrames,
+                                             sequenceHistory[-1],
                                              thisDrift)
                 alignment1, alignment2, rollFactor, score = cnw.nCascadingNWA(seq1,
                                                                               seq2,
                                                                               periodHistory[i],
-                                                                              thisPeriod,
+                                                                              periodHistory[-1],
+                                                                              log=log,
                                                                               target=targ)
             shifts.append((i,
                            len(sequenceHistory)-1,
                            rollFactor-targ,  # TODO - possible error?
-                           score))
+                           1))  # add score here
 
     if log:
+        print('printing shifts')
         pprint(shifts)
 
     (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts,
                                                                                                                                 len(sequenceHistory),
                                                                                                                                 periodHistory,
-                                                                                                                                knownPhaseIndex,
-                                                                                                                                knownPhase,
-                                                                                                                                log)
+                                                                                                                                knownPhaseIndex=knownPhaseIndex,
+                                                                                                                                knownPhase=knownPhase,
+                                                                                                                                log=log)
 
     if log:
         print('solution:')
