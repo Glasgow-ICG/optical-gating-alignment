@@ -93,7 +93,7 @@ def processNewReferenceSequence(rawRefFrames,
     thisResampledSequence = thisResampledSequence.astype('uint8')
     sequenceHistory.append(thisResampledSequence)
     periodHistory.append(80)
-    
+
     if thisDrift is not None:
         if len(driftHistory) > 0:
             # Accumulate the drift throughout history
@@ -190,6 +190,7 @@ def processNewReferenceSequence(rawRefFrames,
     if log:
         print('residuals:')
         pprint(residuals)
+        print('Reference Frame rolling by: {0}'.format(globalShiftSolution[-1]))
 
     # Note for developers:
     # there are two other return statements in this function

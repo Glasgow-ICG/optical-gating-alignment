@@ -183,6 +183,7 @@ def processNewReferenceSequence(rawRefFrames,
     if log:
         print('residuals:')
         pprint(residuals)
+        print('Reference Frame rolling by: {0}'.format(globalShiftSolution[-1]))
 
     # Note for developers:
     # there are two other return statements in this function
