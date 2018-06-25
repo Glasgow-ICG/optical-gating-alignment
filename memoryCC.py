@@ -86,6 +86,9 @@ def processNewReferenceSequence(rawRefFrames,
                     -1000.0,
                     None)
 
+    if log:
+        print('Using new reference frames with shape: {0}'.format(rawRefFrames[0].shape))
+
     # Add latest reference frames to our sequence set
     thisResampledSequence = scc.resampleImageSection(rawRefFrames,
                                                      thisPeriod,
