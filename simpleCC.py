@@ -4,11 +4,18 @@ This module includes all necessary functions.'''
 # Python Imports
 import numpy as np
 from scipy.interpolate import interpn
-import sys
-# Local Imports
-sys.path.insert(0, '../cjn-python-emulator/')
-import realTimeSync as rts
 
+
+def threePointTriangularMinimum(y1, y2, y3):
+    # Fit an even V to three points at x=-1, x=0 and x=+1
+    if y1 > y3:
+        x = 0.5 * (y1-y3)/(y1-y2)
+        y = y2 - x * (y1-y2)
+    else:
+        x = 0.5 * (y1-y3)/(y3-y2)
+        y = y2 + x * (y3-y2)
+
+    return x, y
 
 def crossCorrelationScores(seq1,
                            seq2):
@@ -34,7 +41,7 @@ def minimumScores(scores,
         y1 = scores[np.argmin(scores)-1]  # Works even when minimum is at 0
         y2 = scores[np.argmin(scores)]
         y3 = scores[(np.argmin(scores)+1) % len(scores)]
-        minPos, minVal = rts.threePointTriangularMinimum(y1, y2, y3)
+        minPos, minVal = threePointTriangularMinimum(y1, y2, y3)
     else:
         # Just use integer minimum
         minPos = np.argmin(scores)

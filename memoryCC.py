@@ -14,7 +14,6 @@ import accountForDrift as afd
 sys.path.insert(0, '../j_postacquisition/')
 import shifts_global_solution as sgs
 
-
 def processNewReferenceSequence(rawRefFrames,
                                 thisPeriod,
                                 thisDrift,
@@ -114,53 +113,29 @@ def processNewReferenceSequence(rawRefFrames,
         for i in range(firstOne, len(resampledSequences)-1):
             if log:
                 print('---', i, len(resampledSequences)-1, '---')
-            if i == knownPhaseIndex:
-                if log:
-                    print('Using knownPhase of {0}'.format(knownPhase))
-                targ = knownPhase
-            else:
-                if thisDrift is None:
-                    alignment1, alignment2, targ, score = scc.crossCorrelationRolling(resampledSequences[knownPhaseIndex],
-                                                                                      resampledSequences[i],
-                                                                                      numSamplesPerPeriod,
-                                                                                      numSamplesPerPeriod,
-                                                                                      target=knownPhase)
-                else:
-                    drift = [driftHistory[i][0]-driftHistory[knownPhaseIndex][0],
-                             driftHistory[i][1]-driftHistory[knownPhaseIndex][1]]
-                    seq1, seq2 = afd.matchFrames(resampledSequences[knownPhaseIndex],
-                                                 resampledSequences[i],
-                                                 drift)
-                    alignment1, alignment2, targ, score = scc.crossCorrelationRolling(seq1,
-                                                                                      seq2,
-                                                                                      numSamplesPerPeriod,
-                                                                                      numSamplesPerPeriod,
-                                                                                      target=knownPhase)
-                if log:
-                    print('Using target of {0}'.format(targ))
             if thisDrift is None:
                 alignment1, alignment2, rollFactor, score = scc.crossCorrelationRolling(resampledSequences[i][:numSamplesPerPeriod],
                                                                                         thisResampledSequence[:numSamplesPerPeriod],
                                                                                         numSamplesPerPeriod,
-                                                                                        numSamplesPerPeriod,
-                                                                                        target=targ)
+                                                                                        numSamplesPerPeriod)
             else:
+                # apply drift correction first
                 seq1, seq2 = afd.matchFrames(resampledSequences[i],
                                              resampledSequences[-1],
                                              thisDrift)
                 alignment1, alignment2, rollFactor, score = scc.crossCorrelationRolling(seq1,
                                                                                         seq2,
                                                                                         numSamplesPerPeriod,
-                                                                                        numSamplesPerPeriod,
-                                                                                        target=targ)
+                                                                                        numSamplesPerPeriod)
             shifts.append((i,
                            len(resampledSequences)-1,
-                           (rollFactor-targ) % numSamplesPerPeriod,
+                           rollFactor % numSamplesPerPeriod,
                            score))
 
     if log:
         pprint(shifts)
 
+    # Linear regression for making historical shifts self consistent
     (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts,
                                                                                                                                 len(resampledSequences),
                                                                                                                                 numSamplesPerPeriod,
@@ -172,6 +147,7 @@ def processNewReferenceSequence(rawRefFrames,
         print('solution:')
         pprint(globalShiftSolution)
 
+    # Calculate the residuals on the final solution - this is primarily useful for debugging
     residuals = np.zeros([len(globalShiftSolution), ])
     for i in range(len(globalShiftSolution)-1):
         for shift in shifts:
