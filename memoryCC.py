@@ -120,9 +120,11 @@ def processNewReferenceSequence(rawRefFrames,
                                                                                         numSamplesPerPeriod)
             else:
                 # apply drift correction first
+                drift = [driftHistory[-1][0] - driftHistory[i][0],
+                         driftHistory[-1][1] - driftHistory[i][1]]
                 seq1, seq2 = afd.matchFrames(resampledSequences[i],
                                              resampledSequences[-1],
-                                             thisDrift)
+                                             drift)
                 alignment1, alignment2, rollFactor, score = scc.crossCorrelationRolling(seq1,
                                                                                         seq2,
                                                                                         numSamplesPerPeriod,
