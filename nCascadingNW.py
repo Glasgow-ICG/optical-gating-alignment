@@ -16,30 +16,50 @@ import j_py_sad_correlation as jps
 import getPhase as gtp
 
 
-def constructCascade(scores, gp=0):
-    # Construct grid
-    nwa = np.zeros([scores.shape[0]+1,
-                    scores.shape[1]+1],
-                    'float')
+def constructCascade(scores, gapPenalty=0, axis=0):
+    '''Create a 'cascade' of score arrays for use in the Needleman-Wunsch algorith.
 
-    for t2 in range(scores.shape[0]+1):
-        if t2 == 0:
-            for t1 in range(1, scores.shape[1]+1):
-                mn = nwa[t2, t1-1]+gp
-                nwa[t2, t1] = mn-scores[t2-1, t1-1]
+    Inputs:
+    * scores: a score MxN array between two semi-periodic sequences
+      * Columns represent one sequence of length M; rows the another of length N
+    * gapPenalty: the Needleman-Wunsch penalty for introducing a gap (zero means no penalty, large means big penalty, i.e. less likely).
+    * axis: the axis along which to roll/cascade
+
+    Outputs:
+    * cascades: a MxNx[M/N] array of cascaded scores
+      * The third dimension depends on the axis parameter
+    '''
+    # Function to create each cascaded score array
+    def newScores(scores, gapPenalty=0):
+        cascadedScores = np.zeros([scores.shape[0]+1, scores.shape[1]+1], dtype='float')
+        for t2 in np.arange(cascadedScores.shape[0]):  # for all rows
+            if t2 == 0:  # if the first row
+                for t1 in np.arange(1, cascadedScores.shape[1]):  # for all but first column
+                    maxScore = cascadedScores[t2, t1-1] + gapPenalty  # get score to the left plus the gapPenalty
+                    original = scores[t2-1, t1-1]  # get score for this combination (i.e. high score for a match)
+                    cascadedScores[t2, t1] = maxScore - original
+            else:  # if any but the first row
+                for t1 in np.arange(cascadedScores.shape[1]):  # for all columns
+                    if t1 == 0:  # if the first column
+                        maxScore = cascadedScores[t2-1, t1] + gapPenalty  # get score to the above plus the gapPenalty
         else:
-            for t1 in range(scores.shape[1]+1):
-                if t1 == 0:
-                    mn = nwa[t2-1, t1]+gp
-                else:
-                    mn = max([nwa[t2-1, t1-1],
-                              nwa[t2, t1-1]+gp,
-                              nwa[t2-1, t1]+gp])
-                nwa[t2, t1] = mn-scores[t2-1, t1-1]
-    return nwa
+                        maxScore = max([cascadedScores[t2-1, t1-1],
+                                        cascadedScores[t2, t1-1] + gapPenalty,
+                                        cascadedScores[t2-1, t1] + gapPenalty])  # get maximum score from left, left above and above
+                    original = scores[t2-1, t1-1]  # get score for this combination (i.e. high score for a match)
+                    cascadedScores[t2, t1] = maxScore - original
+        return cascadedScores
 
+    # Create 3D array to hold all cascades
+    cascades = np.zeros([scores.shape[0]+1, scores.shape[1]+1, scores.shape[0]], dtype='float')
 
-def interpImageSeriesZ(sequence, period, interp):
+    # Create a new cascaded score array for each alignment (by rolling along axis)
+    for n in np.arange(scores.shape[1-axis]):  # the 1-axis tricks means we loop over 0 if axis=1 and vice versa
+        cascades[:, :, n] = newScores(scores, gapPenalty)
+        scores = np.roll(scores, 1, axis=axis)
+
+    return cascades
+
         x = np.arange(0, sequence.shape[1])
         y = np.arange(0, sequence.shape[2])
         z = np.arange(0, sequence.shape[0])
@@ -91,11 +111,8 @@ def nCascadingNWA(seq1,
       print(ssds)
       print('Shape: ({0},{1})'.format(ssds.shape[0],ssds.shape[1]))
 
-    # Make Cascades
-    cascades = np.zeros([len(seq2)+1,len(seq1)+1,len(seq1)],'float')
-    for n in range(len(seq1)):
-      cascades[:,:,n] = constructCascade(ssds,gapPenalty)
-      ssds = np.roll(ssds,1,axis=1)
+    # Cascade the SAD Grid
+    cascades = constructCascade(sadGrid, gapPenalty=gapPenalty, axis=1)
 
     # Pick Cascade and Roll Seq1
     rollFactor = np.argmax(cascades[len(seq2),len(seq1),:])
