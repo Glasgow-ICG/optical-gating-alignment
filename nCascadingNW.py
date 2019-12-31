@@ -1,6 +1,6 @@
-'''Modules for phase matching two sequences based on sequence alignment.
-Uses a cascading form of the Needleman Wunsch algorithm.
-This module includes all necessary functions.'''
+'''Modules for phase-matching/aligning two quasi-periodic sequences.
+Uses a cascading form of the Needleman-Wunsch algorithm.
+'''
 
 # Python Imports
 import sys
@@ -62,6 +62,8 @@ def constructCascade(scores, gapPenalty=0, axis=0):
 
 
 def interpImageSeriesZ(sequence, period, interpolationFactor):
+    '''
+    '''
     x = np.arange(0, sequence.shape[1])
     y = np.arange(0, sequence.shape[2])
     z = np.arange(0, sequence.shape[0])
@@ -98,7 +100,8 @@ def nCascadingNWA(sequence,
     * period, remplatePeriod: the float period for sequence/templateSequence in frame units (caller must determine this)
     * gapPenalty: the Needleman-Wunsch penalty for introducing a gap (zero means no penalty, large means big penalty, i.e. less likely).
     * interpolationFactor: integer linear interpolation factor, e.g. a factor of 2 will double the image resolution along P
-    * knownTargetFrame: integer frame (in B) for which to return the roll factor'''
+    * knownTargetFrame: integer frame (in B) for which to return the roll factor
+    '''
     if log:
         print('Sequence #1 has {0} frames and sequence #2 has {1} frames;'.format(
             len(sequence), len(templateSequence)))
@@ -246,7 +249,8 @@ def nCascadingNWA(sequence,
 
 
 def linInterp(string, floatPosition):
-    '''A linear interpolation function - for toy example, i.e. __main__'''
+    '''A linear interpolation function - for toy example, i.e. __main__
+    '''
     if floatPosition//1 == floatPosition:
         # equivalent to string[np.floor(floatPosition).astype('int)]
         return string[floatPosition.astype('int')]
