@@ -3,14 +3,17 @@ Uses a cascading form of the Needleman Wunsch algorithm.
 This module includes all necessary functions.'''
 
 # Python Imports
-import numpy as np
-import math
-from scipy.interpolate import interpn
 import sys
-import getPhase as gtp
-# Local Imports
-sys.path.insert(0, '../py_sad_correlation/')
+
+# Module Imports
+import numpy as np
+from scipy.interpolate import interpn
+
+# Custom Module Imports
 import j_py_sad_correlation as jps
+
+# Local Imports
+import getPhase as gtp
 
 
 def constructCascade(scores, gp=0):
@@ -65,9 +68,6 @@ def nCascadingNWA(seq1,
     if log:
       print('Sequence #1 has {0} frames and sequence #2 has {1} frames;'.format(len(seq1),len(seq2)))
 
-    ls1 = float(len(seq1))
-    ls2 = float(len(seq2))
-
     if interp>1:
       if log:
           print('Interpolating by a factor of {0} for greater precision'.format(interp))
@@ -79,7 +79,7 @@ def nCascadingNWA(seq1,
           print(seq2[:,0,0])
     else:
       if log:
-          print('No interpolation required'.format(interp))
+          print('No interpolation required')
           print(seq1[:,0,0])
           print(seq2[:,0,0])
 
@@ -125,8 +125,8 @@ def nCascadingNWA(seq1,
     traversing = True
 
     # Trace without wrapping
-    alignment1 = np.zeros((0,))
-    alignment2 = np.zeros((0,))
+    alignmentA = np.zeros((0,))
+    alignmentB = np.zeros((0,))
     while traversing:
       xup = x-1
       yleft =  y-1
@@ -157,21 +157,21 @@ def nCascadingNWA(seq1,
       direction = np.argmax(options)
 
       if direction==1:
-          alignment1 = np.append(alignment1,-1)
-          alignment2 = np.append(alignment2,xup)
+          alignmentA = np.append(alignmentA,-1)
+          alignmentB = np.append(alignmentB,xup)
           x = xup
           if log == 'Mega':
               print('Direction Travelled:\tI\'ve gone up')
       elif direction==0:
-          alignment1 = np.append(alignment1,yleft)
-          alignment2 = np.append(alignment2,xup)
+          alignmentA = np.append(alignmentA,yleft)
+          alignmentB = np.append(alignmentB,xup)
           x = xup
           y = yleft
           if log == 'Mega':
               print('Direction Travelled:\tI\'ve gone diagonal')
       elif direction==2:
-          alignment1 = np.append(alignment1,yleft)
-          alignment2 = np.append(alignment2,-1)
+          alignmentA = np.append(alignmentA,yleft)
+          alignmentB = np.append(alignmentB,-1)
           y = yleft
           if log == 'Mega':
               print('Direction Travelled:\tI\'ve gone left')
@@ -181,73 +181,98 @@ def nCascadingNWA(seq1,
           traversing = False
 
     # Reverses sequence
-    alignment1 = alignment1[::-1]
-    alignment2 = alignment2[::-1]
+    alignmentA = alignmentA[::-1]
+    alignmentB = alignmentB[::-1]
 
     if interp>1:
       if log:
           print('De-interpolating for result...')
-      alignment1[alignment1>=0] = (alignment1[alignment1>=0]/interp)%(period1-1)
-      alignment2[alignment2>=0] = (alignment2[alignment2>=0]/interp)%(period2-1)
+      alignmentA[alignmentA>=0] = (alignmentA[alignmentA>=0]/interp)%(period1-1)
+      alignmentB[alignmentB>=0] = (alignmentB[alignmentB>=0]/interp)%(period2-1)
       # rollFactor = rollFactor/interp
 
     if log:
-      print('Aligned sequence #1 (wrapped):\t\t',alignment1)
+      print('Aligned sequence #1 (wrapped):\t\t',alignmentA)
 
-    for i in range(len(alignment1)):
-      if alignment1[i]>-1:
-          alignment1[i] = (alignment1[i]-rollFactor)%(period1)
+    for i in range(len(alignmentA)):
+      if alignmentA[i]>-1:
+          alignmentA[i] = (alignmentA[i]-rollFactor)%(period1)
 
     # get rollFactor properly
-    # print(target,alignment1)
-    rollFactor = gtp.getPhase(alignment1,alignment2,target,log)
+    # print(target,alignmentA)
+    rollFactor = gtp.getPhase(alignmentA,alignmentB,target,log)
 
     if log:
-      print('Aligned sequence #1 (unwrapped):\t',alignment1)
-      print('Aligned sequence #2:\t\t\t',alignment2)
+      print('Aligned sequence #1 (unwrapped):\t',alignmentA)
+      print('Aligned sequence #2:\t\t\t',alignmentB)
 
-    return alignment1, alignment2, rollFactor, score
+    return alignmentA, alignmentB, rollFactor, score
 
-def linInterp(string,position):
-    #only for toy examples
-    if position//1 == position:
-        return string[math.floor(position)]
+def linInterp(string, floatPosition):
+    '''A linear interpolation function - for toy example, i.e. __main__'''
+    if floatPosition//1 == floatPosition:
+        # equivalent to string[np.floor(floatPosition).astype('int)]
+        return string[floatPosition.astype('int')]
     else:
-        interPos = position-(position//1)
-        return string[math.floor(position)] + interPos*(string[math.ceil(position)]-string[math.floor(position)])
+        # Interpolation Ratio
+        interPos = floatPosition-(floatPosition//1)
+
+        # Positions
+        # equivalent to np.floor(floatPosition).astype('int)
+        botPos = floatPosition.astype('int')
+        topPos = np.ceil(floatPosition).astype('int')
+
+        # Values
+        botVal = string[botPos]
+        topVal = string[topPos]
+
+        return botVal + interPos*(topVal - botVal)
 
 if __name__ == '__main__':
-    print('Running toy example with')
     #Toy Example
-    str1 = [0,64,192,255,255,192,128,128,64,0]
-    str2 = [255,192,128,128,64,0,64,64,64,128,192,255]
-    print('Sequence #1: {0}'.format(str1))
-    print('Sequence #2: {0}'.format(str2))
-    seq1  = np.asarray(str1,'uint8').reshape([len(str1),1,1])
-    seq2  = np.asarray(str2,'uint8').reshape([len(str2),1,1])
-    seq1 = np.repeat(np.repeat(seq1,10,1),5,2)
-    seq2 = np.repeat(np.repeat(seq2,10,1),5,2)
+    print('Running toy example with:')
+    toySequenceA = [255,192,128,128,64,0,64,64,64,128,192,255]  # this sequence will be matched to B
+    toySequenceB = [0,64,192,255,255,192,128,128,64,0]  # this sequence will be the template
+    print('\tSequence #1: {0}'.format(toySequenceA))
+    print('\tSequence #2: {0}'.format(toySequenceB))
 
-    alignment1, alignment2, rF, score = nCascadingNWA(seq1,seq2,9.5,11.25,interp=1,log=True)
-    print(rF)
+    # Make sequences 3D arrays (as expected for this algorithm)
+    ndSequenceA  = np.asarray(toySequenceA,'uint8')[:,np.newaxis,np.newaxis]
+    ndSequenceB  = np.asarray(toySequenceB,'uint8')[:,np.newaxis,np.newaxis]
 
-    # Outputs for toy examples - Need to make deal with floats
-    strout1 = []
-    strout2 = []
-    for i in alignment1:
-        # print(i)
-        if i<0:
-            strout1.append(-1)
+    alignmentA, alignmentB, rollFactor, score = nCascadingNWA(ndSequenceA,ndSequenceB,9.5,11.25,interp=1,log=True)
+    print('Roll factor: {0} (score: {1})'.format(rollFactor,score))
+    print('Alignment Maps:')
+    print('\Map #1: {0}'.format(alignmentA))
+    print('\Map #2: {0}'.format(alignmentB))
+
+    # Outputs for toy examples
+    alignedSequenceA = []  # Create new lists to fill with aligned values
+    alignedSequenceB = []
+    for i in alignmentA:  # fill new sequence A
+        if i<0:  # no matching element so repeat the last element in the sequence
+            if len(alignedSequenceA)>0:
+                alignedSequenceA.append(alignedSequenceA[-1])
+            else:  # i.e. a boundary case
+                alignedSequenceA.append(-1)
         else:
-            strout1.append(linInterp(str1,i))
-    for i in alignment2:
-        # print(i)
-        if i<0:
-            strout2.append(-1)
+            alignedSequenceA.append(linInterp(toySequenceA,i))
+    if alignedSequenceA[0]==-1:  # catch boundary case
+        alignedSequenceA[0] = alignedSequenceA[-1]
+    for i in alignmentB:  # fill new sequence B
+        if i<0:  # no matching element so repeat the last element in the sequence
+            if len(alignedSequenceB)>0:
+                alignedSequenceB.append(alignedSequenceB[-1])
+            else:  # i.e. a boundary case
+                alignedSequenceB.append(-1)
         else:
-            strout2.append(linInterp(str2,i))
-    print('\n'.join('{0}\t{1}'.format(a, b) for a, b in zip(strout1, strout2)))
+            alignedSequenceB.append(linInterp(toySequenceB,i))
+    if alignedSequenceB[0]==-1:  # catch boundary case
+        alignedSequenceB[0] = alignedSequenceB[-1]
+
+    # Print
+    print('\nAligned Sequences:\n\tA\t\tB')
+    print('\n'.join('{0:8}\t{1:8}'.format(a, b) for a, b in zip(alignedSequenceA, alignedSequenceB)))
 
 
-    # alignment1, alignment2, rF = nCascadingNWA(seq1,seq2,9.5,11.25,interp=4,log=True)
-    # print(rF)
+
