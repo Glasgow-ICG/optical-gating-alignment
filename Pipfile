@@ -4,6 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [dev-packages]
+pylint = "*"
 
 [packages]
 numpy = "*"
@@ -13,4 +14,4 @@ matplotlib = "*"
 pillow = "*"
 
 [requires]
-python_version = "3.6"
+python_version = "3.8"
