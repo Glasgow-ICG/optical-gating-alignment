@@ -74,7 +74,7 @@ def interpolateImageSeries(sequence, period, interpolationFactor=1):
     * interpolatedSeries: a P'xMxN numpy array
       * Contains np.ceil(interpolationFactor*period) frames, i.e. P'<=interpolationFactor*P
     '''
-
+    
     # Original coordinates
     idx = np.arange(0, sequence.shape[1])
     idy = np.arange(0, sequence.shape[2])
@@ -140,7 +140,7 @@ def nCascadingNWA(sequence,
 
     if log:
         print('Score (Sum of Absolute Differences) matrix:')
-        print(sadGrid)
+        # print(sadGrid)
         print('\tShape: ({0},{1})'.format(sadGrid.shape[0], sadGrid.shape[1]))
 
     # Cascade the SAD Grid
@@ -165,7 +165,7 @@ def nCascadingNWA(sequence,
     if log:
         print('Cascade scores:\t', cascades[-1, -1, :])
         print('Chose cascade {0} of {1}:'.format(rollFactor, len(sequence)))
-        print(nwa)
+        # print(nwa)
         print('Shape: ({0},{1})'.format(nwa.shape[0], nwa.shape[1]))
 
     x = len(templateSequence)
@@ -238,13 +238,18 @@ def nCascadingNWA(sequence,
     alignmentA = alignmentA[::-1]
     alignmentB = alignmentB[::-1]
 
+    print('Aligned sequence #1 (interpolated):\t', alignmentA)
+    print('Aligned sequence #2 (interpolated):\t\t\t', alignmentB)
+
     if interpolationFactor is not None and isinstance(interpolationFactor,int):
         if log:
             print('De-interpolating for result...')
+        # Divide by interpolation factor and modulo period
+        # ignore -1s
         alignmentA[alignmentA >= 0] = (
-            alignmentA[alignmentA >= 0]/interpolationFactor) % (period-1)
+            alignmentA[alignmentA >= 0]/interpolationFactor) % (period)
         alignmentB[alignmentB >= 0] = (
-            alignmentB[alignmentB >= 0]/interpolationFactor) % (templatePeriod-1)
+            alignmentB[alignmentB >= 0]/interpolationFactor) % (templatePeriod)
 
     if log:
         print('Aligned sequence #1 (wrapped):\t\t', alignmentA)
@@ -291,7 +296,7 @@ if __name__ == '__main__':
     toySequenceA = [255, 192, 128, 128, 64, 0, 64, 64, 64,
                     128, 192, 255]  # this sequence will be matched to B
     # this sequence will be matched to B
-    toySequenceA = np.roll([0, 64, 192, 255, 255, 192, 128, 128, 64, 0], 5)
+    # toySequenceA = np.roll([0, 64, 192, 255, 255, 192, 128, 128, 64, 0], 5)
     # this sequence will be the template
     toySequenceB = [0, 64, 192, 255, 255, 192, 128, 128, 64, 0]
     print('\tSequence A: {0}'.format(toySequenceA))
@@ -300,9 +305,11 @@ if __name__ == '__main__':
     # Make sequences 3D arrays (as expected for this algorithm)
     ndSequenceA = np.asarray(toySequenceA, 'uint8')[:, np.newaxis, np.newaxis]
     ndSequenceB = np.asarray(toySequenceB, 'uint8')[:, np.newaxis, np.newaxis]
+    ndSequenceA = np.repeat(np.repeat(ndSequenceA,7,1),5,2)  # make each frame 2D to check everything works for image frames
+    ndSequenceB = np.repeat(np.repeat(ndSequenceB,7,1),5,2)
 
     alignmentA, alignmentB, rollFactor, score = nCascadingNWA(
-        ndSequenceA, ndSequenceB, 9.5, 11.25, interpolationFactor=1, log=True)
+        ndSequenceA, ndSequenceB, len(toySequenceA)-0.5, len(toySequenceB)-0.66, gapPenalty=-255, interpolationFactor=1, log=True)
     print('Roll factor: {0} (score: {1})'.format(rollFactor, score))
     print('Alignment Maps:')
     print('\tMap A: {0}'.format(alignmentA))
@@ -313,26 +320,26 @@ if __name__ == '__main__':
     alignedSequenceB = []
     for i in alignmentA:  # fill new sequence A
         if i < 0:  # no matching element so repeat the last element in the sequence
-            if len(alignedSequenceA) > 0:
-                alignedSequenceA.append(alignedSequenceA[-1])
-            else:  # i.e. a boundary case
-                alignedSequenceA.append(-1)
+            # if len(alignedSequenceA) > 0:
+            #     alignedSequenceA.append(alignedSequenceA[-1])
+            # else:  # i.e. a boundary case
+            alignedSequenceA.append(-1)
         else:
-            alignedSequenceA.append(linInterp(toySequenceA, i))
-    if alignedSequenceA[0] == -1:  # catch boundary case
-        alignedSequenceA[0] = alignedSequenceA[-1]
+            alignedSequenceA.append(linInterp(toySequenceA, np.ceil(i)))
+    # if alignedSequenceA[0] == -1:  # catch boundary case
+        # alignedSequenceA[0] = alignedSequenceA[-1]
     for i in alignmentB:  # fill new sequence B
         if i < 0:  # no matching element so repeat the last element in the sequence
-            if len(alignedSequenceB) > 0:
-                alignedSequenceB.append(alignedSequenceB[-1])
-            else:  # i.e. a boundary case
-                alignedSequenceB.append(-1)
+            # if len(alignedSequenceB) > 0:
+            #     alignedSequenceB.append(alignedSequenceB[-1])
+            # else:  # i.e. a boundary case
+            alignedSequenceB.append(-1)
         else:
-            alignedSequenceB.append(linInterp(toySequenceB, i))
-    if alignedSequenceB[0] == -1:  # catch boundary case
-        alignedSequenceB[0] = alignedSequenceB[-1]
+            alignedSequenceB.append(linInterp(toySequenceB, np.ceil(i)))
+    # if alignedSequenceB[0] == -1:  # catch boundary case
+        # alignedSequenceB[0] = alignedSequenceB[-1]
 
     # Print
     print('\nAligned Sequences:\n\tA\t\tB')
-    print('\n'.join('{0:8}\t{1:8}'.format(a, b)
+    print('\n'.join('{0:8.2f}\t{1:8.2f}'.format(a, b)
                     for a, b in zip(alignedSequenceA, alignedSequenceB)))
