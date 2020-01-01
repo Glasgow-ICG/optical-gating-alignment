@@ -79,6 +79,7 @@ def resampleImageSection(seq1,
                          newLength):
     '''Modified version of j_postacquisition.periods.ResampleImageSection'''
 
+#     print(thisPeriod,newLength)
     result = np.zeros([newLength, seq1.shape[1], seq1.shape[2]], 'float')
     for i in range(newLength):
         desiredPos = (i / float(newLength)) * thisPeriod
