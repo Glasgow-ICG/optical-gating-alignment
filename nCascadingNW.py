@@ -4,10 +4,12 @@ Uses a cascading form of the Needleman-Wunsch algorithm.
 
 # Python Imports
 import sys
+import time
 
 # Module Imports
 import numpy as np
 from scipy.interpolate import interpn
+# from numba import jit, prange
 
 # Custom Module Imports
 import j_py_sad_correlation as jps
@@ -15,7 +17,7 @@ import j_py_sad_correlation as jps
 # Local Imports
 import getPhase as gtp
 
-
+# @jit(nopython=True, parallel=True, fastmath=False)
 def constructCascade(scores, gapPenalty=0, axis=0):
     '''Create a 'cascade' of score arrays for use in the Needleman-Wunsch algorith.
     
@@ -238,8 +240,9 @@ def nCascadingNWA(sequence,
     alignmentA = alignmentA[::-1]
     alignmentB = alignmentB[::-1]
 
-    print('Aligned sequence #1 (interpolated):\t', alignmentA)
-    print('Aligned sequence #2 (interpolated):\t\t\t', alignmentB)
+    if log:
+        print('Aligned sequence #1 (interpolated):\t', alignmentA)
+        print('Aligned sequence #2 (interpolated):\t\t\t', alignmentB)
 
     if interpolationFactor is not None and isinstance(interpolationFactor,int):
         if log:
@@ -290,17 +293,22 @@ def linInterp(string, floatPosition):
         return botVal + interPos*(topVal - botVal)
 
 
-if __name__ == '__main__':
+def numbaCompilation(seqA='simple', log=False):
+    '''Compiles all numba functions in module.'''
+
     # Toy Example
-    print('Running toy example with:')
-    toySequenceA = [255, 192, 128, 128, 64, 0, 64, 64, 64,
-                    128, 192, 255]  # this sequence will be matched to B
+    if log:
+        print('Running toy example with:')  
+    if seqA=='simple':  # this sequence will be matched to B
     # this sequence will be matched to B
-    # toySequenceA = np.roll([0, 64, 192, 255, 255, 192, 128, 128, 64, 0], 5)
+        toySequenceA = np.roll([0, 64, 192, 255, 255, 192, 128, 128, 64, 0], 5)
+    else:
+        toySequenceA = [255, 192, 128, 128, 64, 0, 64, 64, 64, 128, 192, 255]
     # this sequence will be the template
     toySequenceB = [0, 64, 192, 255, 255, 192, 128, 128, 64, 0]
-    print('\tSequence A: {0}'.format(toySequenceA))
-    print('\tSequence B: {0}'.format(toySequenceB))
+    if log:
+        print('\tSequence A: {0}'.format(toySequenceA))
+        print('\tSequence B: {0}'.format(toySequenceB))
 
     # Make sequences 3D arrays (as expected for this algorithm)
     ndSequenceA = np.asarray(toySequenceA, 'uint8')[:, np.newaxis, np.newaxis]
@@ -309,11 +317,12 @@ if __name__ == '__main__':
     ndSequenceB = np.repeat(np.repeat(ndSequenceB,7,1),5,2)
 
     alignmentA, alignmentB, rollFactor, score = nCascadingNWA(
-        ndSequenceA, ndSequenceB, len(toySequenceA)-0.5, len(toySequenceB)-0.66, gapPenalty=-255, interpolationFactor=1, log=True)
-    print('Roll factor: {0} (score: {1})'.format(rollFactor, score))
-    print('Alignment Maps:')
-    print('\tMap A: {0}'.format(alignmentA))
-    print('\tMap B: {0}'.format(alignmentB))
+        ndSequenceA, ndSequenceB, len(toySequenceA)-0.5, len(toySequenceB)-0.66, gapPenalty=-255, interpolationFactor=1, log=log)
+    if log:
+        print('Roll factor: {0} (score: {1})'.format(rollFactor, score))
+        print('Alignment Maps:')
+        print('\tMap A: {0}'.format(alignmentA))
+        print('\tMap B: {0}'.format(alignmentB))
 
     # Outputs for toy examples
     alignedSequenceA = []  # Create new lists to fill with aligned values
@@ -340,6 +349,24 @@ if __name__ == '__main__':
         # alignedSequenceB[0] = alignedSequenceB[-1]
 
     # Print
-    print('\nAligned Sequences:\n\tA\t\tB')
-    print('\n'.join('{0:8.2f}\t{1:8.2f}'.format(a, b)
+    if log:
+        print('\nAligned Sequences:\n\tA\t\tB')
+        print('\n'.join('{0:8.2f}\t{1:8.2f}'.format(a, b)
                     for a, b in zip(alignedSequenceA, alignedSequenceB)))
+
+    return None
+
+
+if __name__ == '__main__':
+    # Compile
+    t = time.time()
+    numbaCompilation(seqA='simple', log=False)
+    print('Compilation run took {0:.2f} seconds.'.format(time.time()-t))
+
+    # Run - timed
+    t = time.time()
+    numbaCompilation(seqA='simple', log=False)
+    print('Post-compilation run took {0:.2f} seconds.'.format(time.time()-t))
+
+    # Run - verbose
+    numbaCompilation(seqA='complex', log=True)
