@@ -61,24 +61,39 @@ def constructCascade(scores, gapPenalty=0, axis=0):
     return cascades
 
 
-def interpImageSeriesZ(sequence, period, interpolationFactor):
-    '''
-    '''
-    x = np.arange(0, sequence.shape[1])
-    y = np.arange(0, sequence.shape[2])
-    z = np.arange(0, sequence.shape[0])
+def interpolateImageSeries(sequence, period, interpolationFactor=1):
+    '''Interpolate a series of images along a 'time' axis.
 
-    # Interpolate whole sequence
-    zOut = np.linspace(0.0,
-                       sequence.shape[0]-1,
-                       sequence.shape[0]*interpolationFactor)
-    interpPoints = np.asarray(np.meshgrid(zOut, x, y, indexing='ij'))
-    interpPoints = np.rollaxis(interpPoints, 0, 4)
-    sequence = interpn((z, x, y), sequence, interpPoints)
-    sequence = np.asarray(sequence, dtype=sequence.dtype)
+    Inputs:
+    * series: a PxMxN numpy array contain P images of size MxN
+      * P is a time-like axis, e.g. time or phase.
+    * period: float period length in units of frames
+    * interpolationFactor: integer interpolation factor, e.g. 2 doubles the series length
+
+    Outputs:
+    * interpolatedSeries: a P'xMxN numpy array
+      * Contains np.ceil(interpolationFactor*period) frames, i.e. P'<=interpolationFactor*P
+    '''
+
+    # Original coordinates
+    idx = np.arange(0, sequence.shape[1])
+    idy = np.arange(0, sequence.shape[2])
+    idt = np.arange(0, sequence.shape[0])
+
+    # Interpolated space coordinates
+    # idtOut = np.arange(0, sequence.shape[0], 1/interpolationFactor)  # supersample
+    idtOut = np.arange(0, period, 1/interpolationFactor)  # supersample
+    interpPoints = np.asarray(np.meshgrid(idtOut, idx, idy, indexing='ij'))
+    interpPoints = np.moveaxis(interpPoints, 0, -1)
+
+    # Sample at interpolated coordinates
+    interpolatedSeries = interpn((idt, idx, idy), sequence, interpPoints)
+    interpolatedSeries = np.asarray(interpolatedSeries, dtype=sequence.dtype)  # safety check for dtype
 
     # take only up to first period
-    return sequence[:int(period*interpolationFactor), :, :]
+    interpolatedSeries = interpolatedSeries[:np.ceil(period*interpolationFactor).astype('int'), :, :]  # is this needed?
+
+    return interpolatedSeries
 
 
 def nCascadingNWA(sequence,
@@ -86,7 +101,7 @@ def nCascadingNWA(sequence,
                   period,
                   templatePeriod,
                   gapPenalty=0,
-                  interpolationFactor=1,
+                  interpolationFactor=None,
                   knownTargetFrame=0,
                   log=False):
     '''Calculating the cascading Needleman-Wunsch alignment for two semi-periodic sequences.
@@ -107,14 +122,14 @@ def nCascadingNWA(sequence,
             len(sequence), len(templateSequence)))
 
     # Interpolate Sequence (for finer alignment)
-    if interpolationFactor > 1:
+    if interpolationFactor is not None and isinstance(interpolationFactor,int):
         if log:
             print(
                 'Interpolating by a factor of {0} for greater precision'.format(interpolationFactor))
         
         # interpolate
-        sequence = interpImageSeriesZ(sequence, period, interpolationFactor)
-        templateSequence = interpImageSeriesZ(templateSequence, templatePeriod, interpolationFactor)
+        sequence = interpolateImageSeries(sequence, period, interpolationFactor)
+        templateSequence = interpolateImageSeries(templateSequence, templatePeriod, interpolationFactor)
         
         if log:
             print('\tSequence #1 now has {0} frames and sequence #2 now has {1} frames'.format(
@@ -223,7 +238,7 @@ def nCascadingNWA(sequence,
     alignmentA = alignmentA[::-1]
     alignmentB = alignmentB[::-1]
 
-    if interpolationFactor > 1:
+    if interpolationFactor is not None and isinstance(interpolationFactor,int):
         if log:
             print('De-interpolating for result...')
         alignmentA[alignmentA >= 0] = (
