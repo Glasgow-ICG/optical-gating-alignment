@@ -1,0 +1,3 @@
+[submodule "py_sad_correlation"]
+	path = py_sad_correlation
+	url = git@bitbucket.org:jmtaylor/py_sad_correlation.git
