@@ -124,7 +124,8 @@ def processNewReferenceSequence(rawRefFrames,
                                                                             periodHistory[knownPhaseIndex],
                                                                             periodHistory[i],
                                                                             log=log,
-                                                                            target=knownPhase)
+                                                                            interpolationFactor=interpolationFactor,
+                                                                            knownTargetFrame=knownPhase)
                 else:
                     drift = [driftHistory[i][0]-driftHistory[knownPhaseIndex][0],
                              driftHistory[i][1]-driftHistory[knownPhaseIndex][1]]
@@ -136,7 +137,8 @@ def processNewReferenceSequence(rawRefFrames,
                                                                             periodHistory[knownPhaseIndex],
                                                                             periodHistory[i],
                                                                             log=log,
-                                                                            target=knownPhase)
+                                                                            interpolationFactor=interpolationFactor,
+                                                                            knownTargetFrame=knownPhase)
                 if log:
                     print('Using target of {0}'.format(targ))
             if thisDrift is None:
@@ -145,7 +147,8 @@ def processNewReferenceSequence(rawRefFrames,
                                                                               periodHistory[i],
                                                                               periodHistory[-1],
                                                                               log=log,
-                                                                              target=targ)
+                                                                              interpolationFactor=interpolationFactor,
+                                                                              knownTargetFrame=targ)
             else:
                 seq1, seq2 = afd.matchFrames(sequenceHistory[i],
                                              sequenceHistory[-1],
@@ -155,7 +158,8 @@ def processNewReferenceSequence(rawRefFrames,
                                                                               periodHistory[i],
                                                                               periodHistory[-1],
                                                                               log=log,
-                                                                              target=targ)
+                                                                              interpolationFactor=interpolationFactor,
+                                                                              knownTargetFrame=targ)
             shifts.append((i,
                            len(sequenceHistory)-1,
                            rollFactor-targ,  # TODO - possible error?

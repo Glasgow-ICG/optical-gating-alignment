@@ -14,7 +14,7 @@ import time
 # Module Imports
 import numpy as np
 from scipy.interpolate import interpn
-from numba import jit, prange
+# from numba import jit, prange
 
 # Custom Module Imports
 import j_py_sad_correlation as jps
@@ -22,67 +22,7 @@ import j_py_sad_correlation as jps
 # Local Imports
 import getPhase as gtp
 
-@jit(nopython=True, parallel=False, fastmath=True, nogil=True)
-def newScores(scores, gapPenalty=0):
-    cascadedScores = np.zeros((scores.shape[0]+1, scores.shape[1]+1), dtype=np.float64)
-    for t2 in np.arange(cascadedScores.shape[0]):  # for all rows
-        if t2 == 0:  # if the first row
-            for t1 in np.arange(1, cascadedScores.shape[1]):  # for all but first column
-                maxScore = cascadedScores[t2, t1-1] + gapPenalty  # get score to the left plus the gapPenalty
-                original = scores[t2-1, t1-1]  # get score for this combination (i.e. high score for a match)
-                cascadedScores[t2, t1] = maxScore - original
-        else:  # if any but the first row
-            for t1 in np.arange(cascadedScores.shape[1]):  # for all columns
-                if t1 == 0:  # if the first column
-                    maxScore = cascadedScores[t2-1, t1] + gapPenalty  # get score to the above plus the gapPenalty
-                else:
-                    maxScore = max([cascadedScores[t2-1, t1-1],
-                                    cascadedScores[t2, t1-1] + gapPenalty,
-                                    cascadedScores[t2-1, t1] + gapPenalty])  # get maximum score from left, left above and above
-                original = scores[t2-1, t1-1]  # get score for this combination (i.e. high score for a match)
-                cascadedScores[t2, t1] = maxScore - original
-    return cascadedScores
-
-
-@jit(nopython=True, parallel=True, fastmath=True, nogil=True)
-def rollScores(scores,rollFactor=1,axis=0):
-    rolledScores = np.zeros(scores.shape,dtype=scores.dtype)
-    for i in prange(scores.shape[axis]):
-        if axis==0:
-            rolledScores[i,:] = scores[(i-rollFactor)%scores.shape[0],:]
-        elif axis==1:
-            rolledScores[:,i] = scores[:,(i-rollFactor)%scores.shape[1]]
-    return rolledScores
-
-
-@jit(nopython=True, parallel=False, fastmath=True, nogil=True)
-def constructCascade(scores, gapPenalty=0, axis=0):
-    '''Create a 'cascade' of score arrays for use in the Needleman-Wunsch algorith.
-    
-    Inputs:
-    * scores: a score MxN array between two semi-periodic sequences
-      * Columns represent one sequence of length M; rows the another of length N
-    * gapPenalty: the Needleman-Wunsch penalty for introducing a gap (zero means no penalty, large means big penalty, i.e. less likely).
-    * axis: the axis along which to roll/cascade
-
-    Outputs:
-    * cascades: a MxNx[M/N] array of cascaded scores
-      * The third dimension depends on the axis parameter
-    '''
-
-    # Create 3D array to hold all cascades
-    cascades = np.zeros((scores.shape[0]+1, scores.shape[1]+1, scores.shape[0]), dtype=np.float64)
-
-    # Create a new cascaded score array for each alignment (by rolling along axis)
-    for n in np.arange(scores.shape[1-axis]):  # the 1-axis tricks means we loop over 0 if axis=1 and vice versa  # TODO this doesn't seem to work?!
-        # rolled = rollScores(scores, n-1, axis=axis)
-        cascades[:, :, n] = newScores(scores, gapPenalty)
-        scores = rollScores(scores, 1, axis=axis)
-
-    return cascades
-
-
-@jit('uint8[:,:](uint8[:,:,:],float64)', nopython=True, parallel=False, fastmath=True, nogil=True)
+# @jit('uint8[:,:](uint8[:,:,:],float64)', nopython=True, parallel=False, fastmath=True, nogil=True)
 def linInterp(string, floatPosition):
     '''A linear interpolation function for a 'string' of ND items
     Note: this is, currently, only for uint8 images
@@ -112,7 +52,7 @@ def linInterp(string, floatPosition):
     return interValInt
 
 
-@jit('uint8[:,:,:](uint8[:,:,:],float64,uint8)', nopython=True, parallel=True, fastmath=True, nogil=True)
+# @jit('uint8[:,:,:](uint8[:,:,:],float64,uint8)', nopython=True, parallel=True, fastmath=True, nogil=True)
 def interpolateImageSeries(sequence, period, interpolationFactor=1):
     '''Interpolate a series of images along a 'time' axis.
     Note: this is, currently, only for uint8 images
@@ -143,7 +83,7 @@ def interpolateImageSeries(sequence, period, interpolationFactor=1):
 
     # Sample at interpolated coordinates
     interpolatedSeries = np.zeros((pOut,m,n),dtype=np.uint8)
-    for i in prange(idtOut.shape[0]):
+    for i in np.arange(idtOut.shape[0]):
         interpolatedSeries[i,...] = linInterp(sequence,idtOut[i])
     # interpolatedSeries = interpn((idt, idx, idy), sequence, interpPoints)
     # interpolatedSeries = np.asarray(interpolatedSeries, dtype=sequence.dtype)  # safety check for dtype
@@ -154,7 +94,84 @@ def interpolateImageSeries(sequence, period, interpolationFactor=1):
     return interpolatedSeries
 
 
-@jit(nopython=True, parallel=False, fastmath=True, nogil=True)
+# @jit(nopython=True, parallel=False, fastmath=True, nogil=True)
+def fillTracebackMatrix(sequenceA, sequenceB, scoreMatrix, log=False):
+    tracebackMatrix = np.zeros((scoreMatrix.shape[0]+1, scoreMatrix.shape[1]+1), dtype=np.float64)
+    gapPenalty = -scoreMatrix.min() * 0.01
+    print(gapPenalty)
+    for t2 in np.arange(tracebackMatrix.shape[0]):  # for all rows
+        if t2 == 0:  # if the first row
+            for t1 in np.arange(1, tracebackMatrix.shape[1]):  # for all but first column
+                # left == insert gap into sequenceA
+                # gapPenalty = sequenceA[t1-1]/2  # i.e. penalise a gap equal to a frame of all zeros
+                insert = tracebackMatrix[t2, t1-1] - gapPenalty  # get score to the left plus the gapPenalty (same as (t1)*gapPenalty)
+
+                tracebackMatrix[t2, t1] = insert
+        else:  # if any but the first row
+            for t1 in np.arange(tracebackMatrix.shape[1]):  # for all columns
+                if t1 == 0:  # if the first column
+                    # above == insert gap into sequenceB (or delete frame for sequenceA)
+                    # gapPenalty = sequenceB[t2-1]/2  # i.e. penalise a gap equal to a frame of all zeros
+                    delete = tracebackMatrix[t2-1, t1] - gapPenalty  # get score to the above plus the gapPenalty (same as t2*gapPenalty)
+
+                    tracebackMatrix[t2, t1] = delete# - matchScore
+                else:
+                    # diagonal
+                    matchScore = scoreMatrix[t2-1, t1-1]  # get score for this combination (i.e. high score for a match)
+                    match = tracebackMatrix[t2-1, t1-1] + matchScore
+
+                    # above
+                    # gapPenalty = sequenceB[t2-1]/2  # i.e. penalise a gap equal to a frame of all zeros
+                    delete = tracebackMatrix[t2-1, t1] - gapPenalty
+
+                    # left
+                    # gapPenalty = sequenceA[t1-1]/2  # i.e. penalise a gap equal to a frame of all zeros
+                    insert = tracebackMatrix[t2, t1-1] - gapPenalty
+
+                    tracebackMatrix[t2, t1] = max([match,delete,insert])  # get maximum score from left, left above and above
+    return tracebackMatrix
+
+
+# @jit(nopython=True, parallel=True, fastmath=True, nogil=True)
+def rollScores(scoreMatrix,rollFactor=1,axis=0):
+    rolledScores = np.zeros(scoreMatrix.shape,dtype=scoreMatrix.dtype)
+    for i in np.arange(scoreMatrix.shape[axis]):
+        if axis==0:
+            rolledScores[i,:] = scoreMatrix[(i-rollFactor)%scoreMatrix.shape[0],:]
+        elif axis==1:
+            rolledScores[:,i] = scoreMatrix[:,(i-rollFactor)%scoreMatrix.shape[1]]
+    return rolledScores
+
+
+# @jit(nopython=True, parallel=False, fastmath=True, nogil=True)
+def constructCascade(sequenceA, sequenceB, scoreMatrix, axis=0, log=False):
+    '''Create a 'cascade' of score arrays for use in the Needleman-Wunsch algorith.
+    
+    Inputs:
+    * scoreMatrix: a score MxN array between two semi-periodic sequences
+      * Columns represent one sequence of length M; rows the another of length N
+    * gapPenalty: the Needleman-Wunsch penalty for introducing a gap (zero means no penalty, large means big penalty, i.e. less likely).
+    * axis: the axis along which to roll/cascade
+
+    Outputs:
+    * cascades: a MxNx[M/N] array of cascaded traceback matrices
+      * The third dimension depends on the axis parameter
+    '''
+
+    # Create 3D array to hold all cascades
+    cascades = np.zeros((scoreMatrix.shape[0]+1, scoreMatrix.shape[1]+1, scoreMatrix.shape[0]), dtype=np.float64)
+
+    # Create a new cascaded score array for each alignment (by rolling along axis)
+    for n in np.arange(scoreMatrix.shape[1-axis]):  # the 1-axis tricks means we loop over 0 if axis=1 and vice versa  # TODO this doesn't seem to work?!
+        if log:
+            print('Getting score matrix for roll of {0} frames...'.format(n))
+        cascades[:, :, n] = fillTracebackMatrix(sequenceA, sequenceB, scoreMatrix, log=log)
+        scoreMatrix = rollScores(scoreMatrix, 1, axis=axis)
+
+    return cascades
+
+
+# @jit(nopython=True, parallel=False, fastmath=True, nogil=True)
 def traverseNW(sequence, templateSequence, nwa, log=False):
     x = templateSequence.shape[0]
     y = sequence.shape[0]
@@ -170,16 +187,16 @@ def traverseNW(sequence, templateSequence, nwa, log=False):
 
         xup = x-1
         yleft = y-1
-        # if log:  # .format() is not compatible with numba
-        #     print('-----')
-        #     print('{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f};'.format(
-        #         'orig', x, y, nwa[x, y]))
-        #     print('{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f};'.format(
-        #         'diag', xup, yleft, nwa[xup, yleft]))
-        #     print('{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f};'.format(
-        #         'up  ', xup, y, nwa[xup, y]))
-        #     print('{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f};'.format(
-        #         'left', x, yleft, nwa[x, yleft]))
+        if log:  # .format() is not compatible with numba
+            print('-----')
+            print('{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f}; ({4}->{5});'.format(
+                'curr', x, y, nwa[x, y], sequence[-y,0,0], templateSequence[-x,0,0]))
+            print('{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f}; ({4}->{5});'.format(
+                'diag', xup, yleft, nwa[xup, yleft], sequence[-yleft,0,0], templateSequence[-xup,0,0]))
+            print('{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f}; ({4}->{5});'.format(
+                'up  ', xup, y, nwa[xup, y], '-1 ({0})'.format(sequence[-y,0,0]), templateSequence[-xup,0,0]))
+            print('{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f}; ({4}->{5});'.format(
+                'left', x, yleft, nwa[x, yleft], sequence[-yleft,0,0], '-1 ({0})'.format(templateSequence[-x,0,0])))
 
         if xup >= 0:
             if yleft >= 0:
@@ -230,13 +247,12 @@ def traverseNW(sequence, templateSequence, nwa, log=False):
 
     return (alignmentA, alignmentB)
 
-@jit(nopython=False, parallel=False, fastmath=True, nogil=True)
+# @jit(nopython=False, parallel=False, fastmath=True, nogil=True)
 def nCascadingNWA(sequence,
                   templateSequence,
-                  period,
-                  templatePeriod,
-                  gapPenalty=0,
-                  interpolationFactor=None,
+                  period=None,
+                  templatePeriod=None,
+                  interpolationFactor=1,
                   knownTargetFrame=0,
                   log=False):
     '''Calculating the cascading Needleman-Wunsch alignment for two semi-periodic sequences.
@@ -248,36 +264,54 @@ def nCascadingNWA(sequence,
     Inputs:
     * sequence, templateSequence: a PxMxN numpy array representing the two periods to align
     * period, remplatePeriod: the float period for sequence/templateSequence in frame units (caller must determine this)
-    * gapPenalty: the Needleman-Wunsch penalty for introducing a gap (zero means no penalty, large means big penalty, i.e. less likely).
+    * gapPenalty: the Needleman-Wunsch penalty for introducing a gap as a percentage (relating to the calculated score matrix)
     * interpolationFactor: integer linear interpolation factor, e.g. a factor of 2 will double the image resolution along P
     * knownTargetFrame: integer frame (in B) for which to return the roll factor
     '''
-    # if log:
-    #     print('Sequence #1 has {0} frames and sequence #2 has {1} frames;'.format(len(sequence), len(templateSequence)))
+    if templatePeriod is None:
+        templatePeriod = templateSequence.shape[0]
+    if period is None:
+        period = sequence.shape[0]
+
+    if log:
+        print('Sequence #1 has {0} frames and sequence #2 has {1} frames;'.format(len(sequence), len(templateSequence)))
 
     # Interpolate Sequence (for finer alignment)
     if interpolationFactor is not None:# and isinstance(interpolationFactor,int):
-        # if log:
-        #     print('Interpolating by a factor of {0} for greater precision'.format(interpolationFactor))
+        if log:
+            print('Interpolating by a factor of {0} for greater precision'.format(interpolationFactor))
         
         # interpolate
         sequence = interpolateImageSeries(sequence, period, interpolationFactor)
         templateSequence = interpolateImageSeries(templateSequence, templatePeriod, interpolationFactor)
         
-        # if log:
-        #     print('\tSequence #1 now has {0} frames and sequence #2 now has {1} frames'.format(
-        #         len(sequence), len(templateSequence)))
+        if log:
+            print('\tSequence #1 now has {0} frames and sequence #2 now has {1} frames:'.format(
+                len(sequence), len(templateSequence)))
+            print('\tSequence A: ', np.squeeze(sequence[:,0,0]))  # comment post dev
+            print('\tSequence B: ', np.squeeze(templateSequence[:,0,0]))  # comment post dev
 
     # Calculate SAD Grid - Using C++ Module
-    sadGrid = jps.sad_grid(sequence, templateSequence)
+    scoreMatrix = jps.sad_grid(sequence, templateSequence)  # takes to uint8's in and outputs one float64
+    # scoreMatrix[scoreMatrix!=0] = -1
+    # scoreMatrix[scoreMatrix==0] = 1
+    # scoreMatrix[scoreMatrix==0] = 255
+    # scoreMatrix[scoreMatrix!=255] = 0
 
-    # if log:
-    #     print('Score (Sum of Absolute Differences) matrix:')
-        # print(sadGrid)
-        # print('\tShape: ({0},{1})'.format(sadGrid.shape[0], sadGrid.shape[1]))
+    # Make score matrix negative
+    scoreMatrix = -scoreMatrix
+
+    if log:
+        print('Score (Sum of Absolute Differences) matrix:')
+        print(scoreMatrix)
+        print('\tDtype: {0};\tShape: ({1},{2})'.format(scoreMatrix.dtype, scoreMatrix.shape[0], scoreMatrix.shape[1]))
 
     # Cascade the SAD Grid
-    cascades = constructCascade(sadGrid, gapPenalty=gapPenalty, axis=1)
+    cascades = constructCascade(sequence, templateSequence, scoreMatrix, axis=1, log=log=='verbose')
+    if log:
+        print('Unrolled Traceback Matrix:')
+        print(cascades[:,:,0])
+        print('\tDtype: {0};\tShape: ({1},{2},{3})'.format(cascades.dtype, cascades.shape[0], cascades.shape[1], cascades.shape[2]))
 
     # Pick Cascade and Roll sequence
     rollFactor = np.argmax(cascades[-1, -1, :])  # pick cascade with largest bottom right score
@@ -286,26 +320,24 @@ def nCascadingNWA(sequence,
     # a1 = f1.add_subplot(111)
     # a1.plot(cascades[len(templateSequence),len(sequence),:])
     # a1.scatter(rollFactor,score,s=80,c='k')
-    # print(score,np.iinfo(sequence.dtype).max,sequence.size)
     score = (score + (np.iinfo(sequence.dtype).max * sequence.size/10)) / \
         (np.iinfo(sequence.dtype).max * sequence.size/10)
     if score <= 0:
         print('ISSUE: Negative Score')
     score = 0 if score < 0 else score
-    # print(score)
+
     nwa = cascades[:, :, rollFactor]
-    sequence = np.roll(sequence, rollFactor, axis=2)
-    # if log:
-    #     print('Cascade scores:\t', cascades[-1, -1, :])
-    #     print('Chose cascade {0} of {1}:'.format(rollFactor, len(sequence)))
-    #     # print(nwa)
-    #     print('Shape: ({0},{1})'.format(nwa.shape[0], nwa.shape[1]))
+    if log:
+        print('Cascade scores:\t', cascades[-1, -1, :])
+        print('Chose cascade {0} of {1}:'.format(rollFactor+1, len(cascades[-1,-1,:])))
+        print(nwa)
+        print('\tDtype: {0};\tShape: ({1},{2})'.format(nwa.dtype, nwa.shape[0], nwa.shape[1]))
 
     ## traverse here TODO
-    (alignmentA, alignmentB) = traverseNW(sequence, templateSequence, nwa, log=='verbose')
+    (alignmentAWrapped, alignmentB) = traverseNW(sequence, templateSequence, nwa, log=log=='verbose')
 
     if log:
-        print('Aligned sequence #1 (interpolated):\t', alignmentA)
+        print('Aligned sequence #1 (interpolated):\t', alignmentAWrapped)
         print('Aligned sequence #2 (interpolated):\t\t\t', alignmentB)
 
     if interpolationFactor is not None:# and isinstance(interpolationFactor,int):
@@ -313,39 +345,53 @@ def nCascadingNWA(sequence,
             print('De-interpolating for result...')
         # Divide by interpolation factor and modulo period
         # ignore -1s
-        alignmentA[alignmentA >= 0] = (
-            alignmentA[alignmentA >= 0]/interpolationFactor) % (period)
+        alignmentAWrapped[alignmentAWrapped >= 0] = (
+            alignmentAWrapped[alignmentAWrapped >= 0]/interpolationFactor) % (period)
         alignmentB[alignmentB >= 0] = (
             alignmentB[alignmentB >= 0]/interpolationFactor) % (templatePeriod)
 
     if log:
-        print('Aligned sequence #1 (wrapped):\t\t', alignmentA)
+        print('Aligned sequence #1 (wrapped):\t\t', alignmentAWrapped)
 
-    for i in range(len(alignmentA)):
-        if alignmentA[i] > -1:
-            alignmentA[i] = (alignmentA[i]-rollFactor) % (period)
+    # roll Alignment A, taking care of indels
+    alignmentA = []
+    indels = []
+    for i in np.arange(alignmentAWrapped.shape[0]):
+        if alignmentAWrapped[i] > -1:
+            alignmentA.append((alignmentAWrapped[i] - rollFactor) % (period))
+        else:
+            idx = i-1
+            before = -1
+            while before<0 and idx<alignmentAWrapped.shape[0]-1:
+                before = alignmentAWrapped[(idx)%len(alignmentAWrapped)]
+                idx = idx+1
+            indels.append(before)
+    for i in indels:
+        alignmentA.insert(alignmentA.index(i)+1,-1)
+    alignmentA = np.array(alignmentA)
 
-    # get rollFactor properly
-    rollFactor = gtp.getPhase(alignmentA, alignmentB, knownTargetFrame, log)
+    # get rollFactor for non-zero index
+    # temp = rollFactor.copy()
+    # rollFactor = gtp.getPhase(alignmentA, alignmentB, knownTargetFrame, log)  # these values are 1 too low? TODO
+    # print('Roll factor @0: {0}\t; @known={1}: {2})'.format(temp,knownTargetFrame,rollFactor))
 
     if log:
         print('Aligned sequence #1 (unwrapped):\t', alignmentA)
         print('Aligned sequence #2:\t\t\t', alignmentB)
-
+    
     return alignmentA, alignmentB, rollFactor, score
 
-@jit(nopython=False, parallel=False, fastmath=True, nogil=True)
-def numbaCompilation(seqA='simple', log=False):
+# @jit(nopython=False, parallel=False, fastmath=True, nogil=True)
+def runToySequences(roll=5, shape=(1,1), log=False):
     '''Compiles all numba functions in module.'''
 
     # Toy Example
-    # this sequence will be the template
-    toySequenceB = np.asarray([0, 64, 192, 255, 255, 192, 128, 128, 64, 0],dtype='uint8')
-    # this sequence will be matched to B
-    if seqA=='simple':
-        toySequenceA = np.roll(toySequenceB, 5)
-    else:
-        toySequenceA = np.asarray([255, 192, 128, 128, 64, 0, 64, 64, 64, 128, 192, 255],dtype='uint8')
+    # toySequenceA and B have very slightly different rhythms but the same period
+    toySequenceA = np.asarray([100, 150, 175, 200, 225, 230, 205, 180, 155, 120],dtype='uint8')
+    toySequenceA = np.roll(toySequenceA, -roll)
+    periodA = toySequenceA.shape[0]
+    toySequenceB = np.asarray([100, 125, 150, 175, 200, 225, 230, 205, 180, 120],dtype='uint8')
+    periodB = toySequenceB.shape[0] # -0.5
     if log:
         print('Running toy example with:')
         print('\tSequence A: ', toySequenceA)
@@ -354,78 +400,81 @@ def numbaCompilation(seqA='simple', log=False):
     # Make sequences 3D arrays (as expected for this algorithm)
     ndSequenceA = toySequenceA[:, np.newaxis, np.newaxis]
     ndSequenceB = toySequenceB[:, np.newaxis, np.newaxis]
-    ndSequenceA = np.repeat(np.repeat(ndSequenceA,700,1),500,2)  # make each frame 2D to check everything works for image frames
-    ndSequenceB = np.repeat(np.repeat(ndSequenceB,700,1),500,2)
+    ndSequenceA = np.repeat(np.repeat(ndSequenceA,shape[0],1),shape[1],2)  # make each frame actually 2D to check everything works for image frames
+    ndSequenceB = np.repeat(np.repeat(ndSequenceB,shape[0],1),shape[1],2)
 
-    alignmentA, alignmentB, rollFactor, score = nCascadingNWA(
-        ndSequenceA, ndSequenceB, len(toySequenceA)-0.5, len(toySequenceB)-0.66, gapPenalty=-255, interpolationFactor=1, log=log)
+    alignmentA, alignmentB, rollFactor, score = nCascadingNWA(ndSequenceA, ndSequenceB, periodA, periodB, log=log)
     if log:
-        # print('Roll factor: {0} (score: {1})'.format(rollFactor, score))
+        print('Roll factor: {0} (score: {1})'.format(rollFactor, score))
         print('Alignment Maps:')
-        # print('\tMap A: {0}'.format(alignmentA))
-        # print('\tMap B: {0}'.format(alignmentB))
+        print('\tMap A: {0}'.format(alignmentA))
+        print('\tMap B: {0}'.format(alignmentB))
+        # print('\tA\t\tB')
+        # print('\n'.join(['{0:08.2f}\t{1:08.2f}'.format(a,b) for (a,b) in zip(alignmentA,alignmentB)]))
 
     # Outputs for toy examples
     alignedSequenceA = []  # Create new lists to fill with aligned values
     alignedSequenceB = []
     for i in alignmentA:  # fill new sequence A
-        if i < 0:  # no matching element so repeat the last element in the sequence
-            # if len(alignedSequenceA) > 0:
-            #     alignedSequenceA.append(alignedSequenceA[-1])
-            # else:  # i.e. a boundary case
+        if i < 0:  # indel
             alignedSequenceA.append(-1)
         else:
-            alignedSequenceA.append(linInterp(ndSequenceA, np.ceil(i))[0,0])
-    # if alignedSequenceA[0] == -1:  # catch boundary case
-        # alignedSequenceA[0] = alignedSequenceA[-1]
+            alignedSequenceA.append(linInterp(ndSequenceA, i)[0,0])
     for i in alignmentB:  # fill new sequence B
-        if i < 0:  # no matching element so repeat the last element in the sequence
-            # if len(alignedSequenceB) > 0:
-            #     alignedSequenceB.append(alignedSequenceB[-1])
-            # else:  # i.e. a boundary case
+        if i < 0:  # indel
             alignedSequenceB.append(-1)
         else:
-            alignedSequenceB.append(linInterp(ndSequenceB, np.ceil(i))[0,0])
-    # if alignedSequenceB[0] == -1:  # catch boundary case
-        # alignedSequenceB[0] = alignedSequenceB[-1]
+            alignedSequenceB.append(linInterp(ndSequenceB, i)[0,0])
 
     # Print
+    score = 0
+    for i,j in zip(alignedSequenceA,alignedSequenceB):
+        if i>-1 and j>-1:
+            i = float(i)
+            j = float(j)
+            score = score - np.abs(i-j)
+        elif i>-1:
+            score = score - i
+        elif j>-1:
+            score = score - j
     if log:
         print('\nAligned Sequences:')
-        print('\tSequence A: ', alignedSequenceA)
-        print('\tSequence B: ', alignedSequenceB)
+        # print('\tSequence A: ', alignedSequenceA)
+        # print('\tSequence B: ', alignedSequenceB)
+        print('\tA\t\tB')
+        print('\n'.join(['{0:8.2f}\t{1:8.2f}'.format(a,b) for (a,b) in zip(alignedSequenceA,alignedSequenceB)]))
+        print('Final Score: {0}'.format(score))
 
     return None
 
 
 if __name__ == '__main__':
-    # TODO - nunba doesn't actually seem to give a time benefit (at the mo - interpn still be rewritten)
-    # Compile
-    t = time.time()
-    numbaCompilation(seqA='simple', log=False)
-    print('Compilation run took {0:.2f} milliseconds.'.format(1000*(time.time()-t)))
+    # # Compile (if using Numba)
+    # t = time.time()
+    # runToySequences(seqA='simple', log=False)
+    # print('Compilation run took {0:.2f} milliseconds.'.format(1000*(time.time()-t)))
 
     # Run - timed
-    t = time.time()
-    numbaCompilation(seqA='simple', log=False)
-    print('Post-compilation run took {0:.2f} milliseconds.'.format(1000*(time.time()-t)))
+    # t = time.time()
+    # runToySequences(seqA='simple', log=False)
+    # print('Post-compilation run took {0:.2f} milliseconds.'.format(1000*(time.time()-t)))
 
-    # Run - Python
-    t = time.time()
-    numbaCompilation.py_func(seqA='simple', log=False)
-    print('Equivalent Python run took {0:.2f} milliseconds.'.format(1000*(time.time()-t)))
+    # # Run - Python (if using Numba)
+    # t = time.time()
+    # runToySequences.py_func(seqA='simple', log=False)
+    # print('Equivalent Python run took {0:.2f} milliseconds.'.format(1000*(time.time()-t)))
 
     # Profiler
-    pr = cProfile.Profile()
-    pr.enable()
+    # pr = cProfile.Profile()
+    # pr.enable()
 
     # Run - verbose
-    numbaCompilation(seqA='complex', log=True)
+    runToySequences(roll=7, shape=(1,1), log=True)
 
     # Profile
-    pr.disable()
-    s = io.StringIO()
-    sortby = pstats.SortKey.CUMULATIVE
-    ps = pstats.Stats(pr, stream=s).strip_dirs().sort_stats(sortby)
-    ps.print_stats()
+    # pr.disable()
+    # s = io.StringIO()
+    # sortby = pstats.SortKey.CUMULATIVE
+    # ps = pstats.Stats(pr, stream=s).strip_dirs().sort_stats(sortby)
+    # ps.print_stats()
     # print(s.getvalue())

@@ -2,8 +2,8 @@ import math
 import numpy as np
 import scipy.ndimage as sp
 
-def getPhase(alignment1,alignment2,phase,log=False):
-    ## Find precise index of phase in alignment1
+def getPhase(alignment1,alignment2,period1,phase,log=False):
+    ## Find precise index of phase (from alignment 2) in alignment1
     # case where exact phase is captured in alignment sequence
     if phase in alignment1:
         # idxPos = alignment1.index(phase)#only works for lists not numpy arrays
@@ -99,7 +99,7 @@ def getPhase(alignment1,alignment2,phase,log=False):
         if log:
             print('Interpolated index used to calculated phase of {0} in alignment 2'.format(phase))
 
-        return phase%s2len
+        return phase%period1
     #just in case
     print('ERROR: No phase calculated for alignment sequence 2')
     return None
