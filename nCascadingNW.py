@@ -2,13 +2,23 @@
 Uses a cascading form of the Needleman Wunsch algorithm.
 This module includes all necessary functions.'''
 
+# Profiling
+import cProfile
+import pstats
+import io
+
 # Python Imports
-import numpy as np
 import sys
-import getPhase as gtp
-# Local Imports
-sys.path.insert(0, '../py_sad_correlation/')
+import time
+
+# Module Imports
+import numpy as np
+
+# Custom Module Imports
 import j_py_sad_correlation as jps
+
+# Local Imports
+import getPhase as gtp
 
 
 def linInterp(string, floatPosition):
