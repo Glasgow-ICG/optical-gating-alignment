@@ -95,40 +95,41 @@ def interpolateImageSeries(sequence, period, interpolationFactor=1):
 
 
 # @jit(nopython=True, parallel=False, fastmath=True, nogil=True)
-def fillTracebackMatrix(sequenceA, sequenceB, scoreMatrix, log=False):
+def fillTracebackMatrix(sequenceA, sequenceB, scoreMatrix, gapPenalty=0, log=False):
     tracebackMatrix = np.zeros((scoreMatrix.shape[0]+1, scoreMatrix.shape[1]+1), dtype=np.float64)
-    gapPenalty = -scoreMatrix.min() * 0.01
-    print(gapPenalty)
+#     gapPenalty = 1#-scoreMatrix.min() * 0.01
     for t2 in np.arange(tracebackMatrix.shape[0]):  # for all rows
         if t2 == 0:  # if the first row
             for t1 in np.arange(1, tracebackMatrix.shape[1]):  # for all but first column
+                matchScore = scoreMatrix[t2-1, t1-1]  # get score for this combination (i.e. high score for a match)
                 # left == insert gap into sequenceA
                 # gapPenalty = sequenceA[t1-1]/2  # i.e. penalise a gap equal to a frame of all zeros
-                insert = tracebackMatrix[t2, t1-1] - gapPenalty  # get score to the left plus the gapPenalty (same as (t1)*gapPenalty)
+                insert = tracebackMatrix[t2, t1-1] - matchScore  # get score to the left plus the gapPenalty (same as (t1)*gapPenalty)
 
                 tracebackMatrix[t2, t1] = insert
         else:  # if any but the first row
             for t1 in np.arange(tracebackMatrix.shape[1]):  # for all columns
                 if t1 == 0:  # if the first column
+                    matchScore = scoreMatrix[t2-1, t1-1]  # get score for this combination (i.e. high score for a match)
                     # above == insert gap into sequenceB (or delete frame for sequenceA)
                     # gapPenalty = sequenceB[t2-1]/2  # i.e. penalise a gap equal to a frame of all zeros
-                    delete = tracebackMatrix[t2-1, t1] - gapPenalty  # get score to the above plus the gapPenalty (same as t2*gapPenalty)
+                    delete = tracebackMatrix[t2-1, t1] - matchScore  # get score to the above plus the gapPenalty (same as t2*gapPenalty)
 
                     tracebackMatrix[t2, t1] = delete# - matchScore
                 else:
-                    # diagonal
                     matchScore = scoreMatrix[t2-1, t1-1]  # get score for this combination (i.e. high score for a match)
-                    match = tracebackMatrix[t2-1, t1-1] + matchScore
+                    # diagonal
+                    match = tracebackMatrix[t2-1, t1-1]
 
                     # above
                     # gapPenalty = sequenceB[t2-1]/2  # i.e. penalise a gap equal to a frame of all zeros
-                    delete = tracebackMatrix[t2-1, t1] - gapPenalty
+                    delete = tracebackMatrix[t2-1, t1] - matchScore
 
                     # left
                     # gapPenalty = sequenceA[t1-1]/2  # i.e. penalise a gap equal to a frame of all zeros
-                    insert = tracebackMatrix[t2, t1-1] - gapPenalty
+                    insert = tracebackMatrix[t2, t1-1] - matchScore
 
-                    tracebackMatrix[t2, t1] = max([match,delete,insert])  # get maximum score from left, left above and above
+                    tracebackMatrix[t2, t1] = max([match,insert,delete])  # get maximum score from left, left above and above
     return tracebackMatrix
 
 
@@ -144,7 +145,7 @@ def rollScores(scoreMatrix,rollFactor=1,axis=0):
 
 
 # @jit(nopython=True, parallel=False, fastmath=True, nogil=True)
-def constructCascade(sequenceA, sequenceB, scoreMatrix, axis=0, log=False):
+def constructCascade(sequenceA, sequenceB, scoreMatrix, gapPenalty=0, axis=0, log=False):
     '''Create a 'cascade' of score arrays for use in the Needleman-Wunsch algorith.
     
     Inputs:
@@ -165,7 +166,7 @@ def constructCascade(sequenceA, sequenceB, scoreMatrix, axis=0, log=False):
     for n in np.arange(scoreMatrix.shape[1-axis]):  # the 1-axis tricks means we loop over 0 if axis=1 and vice versa  # TODO this doesn't seem to work?!
         if log:
             print('Getting score matrix for roll of {0} frames...'.format(n))
-        cascades[:, :, n] = fillTracebackMatrix(sequenceA, sequenceB, scoreMatrix, log=log)
+        cascades[:, :, n] = fillTracebackMatrix(sequenceA, sequenceB, scoreMatrix, gapPenalty=gapPenalty, log=log)
         scoreMatrix = rollScores(scoreMatrix, 1, axis=axis)
 
     return cascades
@@ -252,7 +253,8 @@ def nCascadingNWA(sequence,
                   templateSequence,
                   period=None,
                   templatePeriod=None,
-                  interpolationFactor=1,
+                  interpolationFactor=None,
+                  gapPenalty = 0,
                   knownTargetFrame=0,
                   log=False):
     '''Calculating the cascading Needleman-Wunsch alignment for two semi-periodic sequences.
@@ -307,7 +309,7 @@ def nCascadingNWA(sequence,
         print('\tDtype: {0};\tShape: ({1},{2})'.format(scoreMatrix.dtype, scoreMatrix.shape[0], scoreMatrix.shape[1]))
 
     # Cascade the SAD Grid
-    cascades = constructCascade(sequence, templateSequence, scoreMatrix, axis=1, log=log=='verbose')
+    cascades = constructCascade(sequence, templateSequence, scoreMatrix, gapPenalty=gapPenalty, axis=1, log=log=='verbose')
     if log:
         print('Unrolled Traceback Matrix:')
         print(cascades[:,:,0])
@@ -382,7 +384,7 @@ def nCascadingNWA(sequence,
     return alignmentA, alignmentB, rollFactor, score
 
 # @jit(nopython=False, parallel=False, fastmath=True, nogil=True)
-def runToySequences(roll=5, shape=(1,1), log=False):
+def runToySequences(roll=5, gapPenalty=0, shape=(1,1), log=False):
     '''Compiles all numba functions in module.'''
 
     # Toy Example
@@ -403,7 +405,7 @@ def runToySequences(roll=5, shape=(1,1), log=False):
     ndSequenceA = np.repeat(np.repeat(ndSequenceA,shape[0],1),shape[1],2)  # make each frame actually 2D to check everything works for image frames
     ndSequenceB = np.repeat(np.repeat(ndSequenceB,shape[0],1),shape[1],2)
 
-    alignmentA, alignmentB, rollFactor, score = nCascadingNWA(ndSequenceA, ndSequenceB, periodA, periodB, log=log)
+    alignmentA, alignmentB, rollFactor, score = nCascadingNWA(ndSequenceA, ndSequenceB, periodA, periodB, gapPenalty=gapPenalty, log=log)
     if log:
         print('Roll factor: {0} (score: {1})'.format(rollFactor, score))
         print('Alignment Maps:')
@@ -469,7 +471,7 @@ if __name__ == '__main__':
     # pr.enable()
 
     # Run - verbose
-    runToySequences(roll=7, shape=(1,1), log=True)
+    runToySequences(roll=7, gapPenalty=1, shape=(1024,1024), log=True)
 
     # Profile
     # pr.disable()

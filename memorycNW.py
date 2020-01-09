@@ -26,6 +26,8 @@ def processNewReferenceSequence(rawRefFrames,
                                 knownPhaseIndex=0,
                                 knownPhase=0,
                                 maxOffsetToConsider=3,
+                                interpolationFactor=None,
+                                gapPenalty=0,
                                 log=True):
     ''' Based on memoryCC.processNewReferenceSequence
 
@@ -124,8 +126,9 @@ def processNewReferenceSequence(rawRefFrames,
                                                                             periodHistory[knownPhaseIndex],
                                                                             periodHistory[i],
                                                                             log=log,
-                                                                            interpolationFactor=interpolationFactor,
-                                                                            knownTargetFrame=knownPhase)
+                                                                            gapPenalty=gapPenalty,
+                                                                            interpolationFactor=interpolationFactor)#,
+#                                                                             knownTargetFrame=knownPhase)
                 else:
                     drift = [driftHistory[i][0]-driftHistory[knownPhaseIndex][0],
                              driftHistory[i][1]-driftHistory[knownPhaseIndex][1]]
@@ -137,8 +140,9 @@ def processNewReferenceSequence(rawRefFrames,
                                                                             periodHistory[knownPhaseIndex],
                                                                             periodHistory[i],
                                                                             log=log,
-                                                                            interpolationFactor=interpolationFactor,
-                                                                            knownTargetFrame=knownPhase)
+                                                                            gapPenalty=gapPenalty,
+                                                                            interpolationFactor=interpolationFactor)#,
+#                                                                             knownTargetFrame=knownPhase)
                 if log:
                     print('Using target of {0}'.format(targ))
             if thisDrift is None:
@@ -147,8 +151,9 @@ def processNewReferenceSequence(rawRefFrames,
                                                                               periodHistory[i],
                                                                               periodHistory[-1],
                                                                               log=log,
-                                                                              interpolationFactor=interpolationFactor,
-                                                                              knownTargetFrame=targ)
+                                                                              gapPenalty=gapPenalty,
+                                                                              interpolationFactor=interpolationFactor)#,
+#                                                                               knownTargetFrame=targ)
             else:
                 seq1, seq2 = afd.matchFrames(sequenceHistory[i],
                                              sequenceHistory[-1],
@@ -158,8 +163,9 @@ def processNewReferenceSequence(rawRefFrames,
                                                                               periodHistory[i],
                                                                               periodHistory[-1],
                                                                               log=log,
-                                                                              interpolationFactor=interpolationFactor,
-                                                                              knownTargetFrame=targ)
+                                                                              gapPenalty=gapPenalty,
+                                                                              interpolationFactor=interpolationFactor)#,
+#                                                                               knownTargetFrame=targ)
             shifts.append((i,
                            len(sequenceHistory)-1,
                            rollFactor-targ,  # TODO - possible error?
@@ -172,9 +178,9 @@ def processNewReferenceSequence(rawRefFrames,
     (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts,
                                                                                                                                 len(sequenceHistory),
                                                                                                                                 periodHistory,
+                                                                                                                               log=log,
                                                                                                                                 knownPhaseIndex=knownPhaseIndex,
-                                                                                                                                knownPhase=knownPhase,
-                                                                                                                                log=log)
+                                                                                                                                knownPhase=knownPhase)
 
     if log:
         print('solution:')
