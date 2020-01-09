@@ -164,10 +164,86 @@ def constructCascade(scoreMatrix, gapPenalty=0, axis=0, log=False):
     return cascades
 
 
+def traverseNW(sequence, templateSequence, nwa, log=False):
+    x = templateSequence.shape[0]
+    y = sequence.shape[0]
+
+    #  Traverse grid
+    traversing = True
+
+    # Trace without wrapping
+    alignmentA = []
+    alignmentB = []
+    while traversing:
+        options = np.zeros((3,))
+
+        xup = x-1
+        yleft = y-1
+        if log:  # .format() is not compatible with numba
+            print('-----')
+            print('{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f}; ({4}->{5});'.format(
+                'curr', x, y, nwa[x, y], sequence[-y,0,0], templateSequence[-x,0,0]))
+            print('{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f}; ({4}->{5});'.format(
+                'diag', xup, yleft, nwa[xup, yleft], sequence[-yleft,0,0], templateSequence[-xup,0,0]))
+            print('{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f}; ({4}->{5});'.format(
+                'up  ', xup, y, nwa[xup, y], '-1 ({0})'.format(sequence[-y,0,0]), templateSequence[-xup,0,0]))
+            print('{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f}; ({4}->{5});'.format(
+                'left', x, yleft, nwa[x, yleft], sequence[-yleft,0,0], '-1 ({0})'.format(templateSequence[-x,0,0])))
+
+        if xup >= 0:
+            if yleft >= 0:
+                options[:] = [nwa[xup, yleft], nwa[xup, y], nwa[x, yleft]]
+            else:
+                if log:
+                    print('Boundary Condition:\tI\'m at the left')
+                options[:] = [-np.inf, nwa[xup, y], -np.inf]
+        else:
+            if log:
+                print('Boundary Condition:\tI\'m at the top')
+            if yleft >= 0:
+                options[:] = [-np.inf, -np.inf, nwa[x, yleft]]
+            else:
+                if log:
+                    print('Boundary Condition:\tI\'m at the top left')
+                    print('Boundary Condition:\tI should not have  got here!')
+                break
+        direction = np.argmax(options)
+
+        if direction == 1:
+            alignmentA.append(-1)
+            alignmentB.append(xup)
+            x = xup
+            if log:
+                print('Direction Travelled:\tI\'ve gone up')
+        elif direction == 0:
+            alignmentA.append(yleft)
+            alignmentB.append(xup)
+            x = xup
+            y = yleft
+            if log:
+                print('Direction Travelled:\tI\'ve gone diagonal')
+        elif direction == 2:
+            alignmentA.append(yleft)
+            alignmentB.append(-1)
+            y = yleft
+            if log:
+                print('Direction Travelled:\tI\'ve gone left')
+        if x == 0 and y == 0:
+            if log:
+                print('Traversing Complete')
+            traversing = False
+
+    # Reverses sequence
+    alignmentA = np.asarray(alignmentA[::-1],dtype=np.float)
+    alignmentB = np.asarray(alignmentB[::-1],dtype=np.float)
+
+    return (alignmentA, alignmentB)
+
+
 def nCascadingNWA(sequence,
                   templateSequence,
-                  period1,
-                  period2,
+                  period,
+                  templatePeriod,
                   gapPenalty=0,
                   interpolationFactor=1,
                   knownTargetFrame=0,
@@ -182,8 +258,8 @@ def nCascadingNWA(sequence,
     if interpolationFactor is not None:
       if log:
           print('Interpolating by a factor of {0} for greater precision'.format(interpolationFactor))
-      sequence = interpolateImageSeries(sequence, period1, interpolationFactor=interpolationFactor)
-      templateSequence = interpolateImageSeries(templateSequence, period1, interpolationFactor=interpolationFactor)
+      sequence = interpolateImageSeries(sequence, period, interpolationFactor=interpolationFactor)
+      templateSequence = interpolateImageSeries(templateSequence, period, interpolationFactor=interpolationFactor)
       if log:
           print('Sequence #1 has {0} frames and sequence #2 has {1} frames'.format(len(sequence),len(templateSequence)))
           print(sequence[:,0,0])
@@ -230,94 +306,51 @@ def nCascadingNWA(sequence,
         print(nwa)
         print('Shape: ({0},{1})'.format(nwa.shape[0],nwa.shape[1]))
 
-    x = len(templateSequence)
-    y = len(sequence)
-
-    #  Traverse grid
-    traversing = True
-
-    # Trace without wrapping
-    alignment1 = []
-    alignment2 = []
-    while traversing:
-      xup = x-1
-      yleft =  y-1
-      if log == 'Mega':
-          print('-----')
-          print('{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f};'.format('orig',x,y,nwa[x,y]))
-          print('{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f};'.format('diag',xup,yleft,nwa[xup,yleft]))
-          print('{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f};'.format('up  ',xup,y,nwa[xup,y]))
-          print('{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f};'.format('left',x,yleft,nwa[x,yleft]))
-
-      if xup>=0:
-          if  yleft>=0:
-              options = [nwa[xup,yleft],nwa[xup,y],nwa[x,yleft]]
-          else:
-              if log == 'Mega':
-                  print('Boundary Condition:\tI\'m at the left')
-              options = [-np.inf,nwa[xup,y],-np.inf]
-      else:
-          if log == 'Mega':
-              print('Boundary Condition:\tI\'m at the top')
-          if  yleft>=0:
-              options = [-np.inf,-np.inf,nwa[x,yleft]]
-          else:
-              if log == 'Mega':
-                  print('Boundary Condition:\tI\'m at the top left')
-                  print('Boundary Condition:\tI should not have  got here!')
-              break
-      direction = np.argmax(options)
-
-      if direction==1:
-          alignment1.append(-1)
-          alignment2.append(xup)
-          x = xup
-          if log == 'Mega':
-              print('Direction Travelled:\tI\'ve gone up')
-      elif direction==0:
-          alignment1.append(yleft)
-          alignment2.append(xup)
-          x = xup
-          y = yleft
-          if log == 'Mega':
-              print('Direction Travelled:\tI\'ve gone diagonal')
-      elif direction==2:
-          alignment1.append(yleft)
-          alignment2.append(-1)
-          y = yleft
-          if log == 'Mega':
-              print('Direction Travelled:\tI\'ve gone left')
-      if x==0 and y==0:
-          if log == 'Mega':
-              print('Traversing Complete')
-          traversing = False
-
-    # Reverses sequence
-    alignment1 = np.asarray(alignment1[::-1],dtype=np.float)
-    alignment2 = np.asarray(alignment2[::-1],dtype=np.float)
+    (alignmentAWrapped, alignmentB) = traverseNW(sequence, templateSequence, nwa, log=log=='verbose')
+    
+    if log:
+        print('Aligned sequence #1 (interpolated):\t', alignmentAWrapped)
+        print('Aligned sequence #2 (interpolated):\t\t\t', alignmentB)
 
     if interpolationFactor is not None:
-      if log:
-          print('De-interpolating for result...')
-      alignment1[alignment1>=0] = (alignment1[alignment1>=0]/interpolationFactor)%(period1-1)
-      alignment2[alignment2>=0] = (alignment2[alignment2>=0]/interpolationFactor)%(period2-1)
-      rollFactor = rollFactor/interpolationFactor
+        if log:
+            print('De-interpolating for result...')
+        # Divide by interpolation factor and modulo period
+        # ignore -1s
+        alignmentAWrapped[alignmentAWrapped >= 0] = (
+            alignmentAWrapped[alignmentAWrapped >= 0]/interpolationFactor) % (period)
+        alignmentB[alignmentB >= 0] = (
+            alignmentB[alignmentB >= 0]/interpolationFactor) % (templatePeriod)
+        rollFactor = (rollFactor/interpolationFactor) % (period)  # TODO: is this the right period?
 
     if log:
-      print('Aligned sequence #1 (wrapped):\t\t',alignment1)
+        print('Aligned sequence #1 (wrapped):\t\t',alignmentAWrapped)
 
-    for i in range(len(alignment1)):
-      if alignment1[i]>-1:
-          alignment1[i] = (alignment1[i]-rollFactor)%(period1)
+    # roll Alignment A, taking care of indels
+    alignmentA = []
+    indels = []
+    for i in np.arange(alignmentAWrapped.shape[0]):
+        if alignmentAWrapped[i] > -1:
+            alignmentA.append((alignmentAWrapped[i] - rollFactor) % (period))
+        else:
+            idx = i-1
+            before = -1
+            while before<0 and idx<alignmentAWrapped.shape[0]-1:
+                before = alignmentAWrapped[(idx)%len(alignmentAWrapped)]
+                idx = idx+1
+            indels.append(before)
+    for i in indels:
+        alignmentA.insert(alignmentA.index(i)+1,-1)
+    alignmentA = np.array(alignmentA)
 
     # get rollFactor properly
-    rollFactor = gtp.getPhase(alignment1,alignment2,knownTargetFrame,log)
+    rollFactor = gtp.getPhase(alignmentA,alignmentB,knownTargetFrame,log)
 
     if log:
-      print('Aligned sequence #1 (unwrapped):\t',alignment1)
-      print('Aligned sequence #2:\t\t\t',alignment2)
-
-    return alignment1, alignment2, rollFactor, score
+        print('Aligned sequence #1 (unwrapped):\t', alignmentA)
+        print('Aligned sequence #2:\t\t\t', alignmentB)
+    
+    return alignmentA, alignmentB, rollFactor, score
 
 def linInterp(string,position):
     #only for toy examples
