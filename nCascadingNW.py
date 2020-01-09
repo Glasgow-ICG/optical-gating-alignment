@@ -245,38 +245,46 @@ def nCascadingNWA(sequence,
                   period,
                   templatePeriod,
                   gapPenalty=0,
-                  interpolationFactor=1,
+                  interpolationFactor=None,
                   knownTargetFrame=0,
                   log=True):
-    ''' Assumes sequence and templateSequence are 3D numpy arrays of [t,x,y]'''
-    if log:
-        print('Sequence #1 has {0} frames and sequence #2 has {1} frames;'.format(len(sequence),len(templateSequence)))
+    '''Calculating the cascading Needleman-Wunsch alignment for two semi-periodic sequences.
 
-    ls1 = float(len(sequence))
-    ls2 = float(len(templateSequence))
+    For the two sequences provided, this algorithm will assume the second is the 'template'.
+    The template sequence will see only minor changes for alignment, i.e. adding gaps.
+    The other sequence will see rolling and gap addition.
+
+    Inputs:
+    * sequence, templateSequence: a PxMxN numpy array representing the two periods to align
+    * period, remplatePeriod: the float period for sequence/templateSequence in frame units (caller must determine this)
+    * gapPenalty: the Needleman-Wunsch penalty for introducing a gap as a percentage (relating to the calculated score matrix)
+    * interpolationFactor: integer linear interpolation factor, e.g. a factor of 2 will double the image resolution along P
+    * knownTargetFrame: integer frame (in B) for which to return the roll factor
+    '''
+    if templatePeriod is None:
+        templatePeriod = templateSequence.shape[0]
+    if period is None:
+        period = sequence.shape[0]
+
+    if log:
+        print('Sequence #1 has {0} frames and sequence #2 has {1} frames'.format(len(sequence), len(templateSequence)))
 
     if interpolationFactor is not None:
       if log:
-          print('Interpolating by a factor of {0} for greater precision'.format(interpolationFactor))
+          print('Interpolating by a factor of {0} for greater precision...'.format(interpolationFactor))
       sequence = interpolateImageSeries(sequence, period, interpolationFactor=interpolationFactor)
       templateSequence = interpolateImageSeries(templateSequence, period, interpolationFactor=interpolationFactor)
       if log:
-          print('Sequence #1 has {0} frames and sequence #2 has {1} frames'.format(len(sequence),len(templateSequence)))
-          print(sequence[:,0,0])
-          print(templateSequence[:,0,0])
-    else:
-      if log:
-          print('No interpolation required'.format(interpolationFactor))
-          print(sequence[:,0,0])
-          print(templateSequence[:,0,0])
+          print('\tSequence #1 now has {0} frames and sequence #2 now has {1} frames:'.format(
+                len(sequence), len(templateSequence)))
 
     # Calculate Score Matrix - C++
     scoreMatrix = jps.sad_grid(sequence, templateSequence)
 
     if log:
-        print ('Score matrix:')
+        print ('Score Matrix:')
         print(scoreMatrix)
-        print('Shape: ({0},{1})'.format(scoreMatrix.shape[0],scoreMatrix.shape[1]))
+        print('\tDtype: {0};\tShape: ({1},{2})'.format(scoreMatrix.dtype, scoreMatrix.shape[0], scoreMatrix.shape[1]))
         
     # Cascade the SAD Grid
     cascades = constructCascade(scoreMatrix, gapPenalty=gapPenalty, axis=1, log=log=='verbose')
@@ -286,19 +294,14 @@ def nCascadingNWA(sequence,
         print('\tDtype: {0};\tShape: ({1},{2},{3})'.format(cascades.dtype, cascades.shape[0], cascades.shape[1], cascades.shape[2]))
 
     # Pick Cascade and Roll sequence
-    rollFactor = np.argmax(cascades[len(templateSequence),len(sequence),:])
-    score = np.amax(cascades[len(templateSequence),len(sequence),:])
-    # f1 = plt.figure()
-    # a1 = f1.add_subplot(111)
-    # a1.plot(cascades[len(templateSequence),len(sequence),:])
-    # a1.scatter(rollFactor,score,s=80,c='k')
-    # print(score,np.iinfo(sequence.dtype).max,sequence.size)
-    score = (score + (np.iinfo(sequence.dtype).max * sequence.size/10))/(np.iinfo(sequence.dtype).max * sequence.size/10)
+    rollFactor = np.argmax(cascades[-1, -1, :])
+    score = cascades[-1, -1, rollFactor]
+    score = (score + (np.iinfo(sequence.dtype).max * sequence.size/10)) / (np.iinfo(sequence.dtype).max * sequence.size/10)
     if score<=0:
         print('ISSUE: Negative Score')
-    score = 0 if score<0 else score#
-    # print(score)
-    nwa = cascades[:,:,rollFactor]
+    score = 0 if score<0 else score
+
+    nwa = cascades[:, :, rollFactor]
     sequence = np.roll(sequence,rollFactor,axis=2)
     if log:
         print('Cascade scores:\t',cascades[len(templateSequence),len(sequence),:])
@@ -309,7 +312,8 @@ def nCascadingNWA(sequence,
     (alignmentAWrapped, alignmentB) = traverseNW(sequence, templateSequence, nwa, log=log=='verbose')
     
     if log:
-        print('Aligned sequence #1 (interpolated):\t', alignmentAWrapped)
+        print('Rollfactor (interpolated):\t{0}'.format(rollFactor))
+        print('Aligned sequence #1 (interpolated, wrapped):\t', alignmentAWrapped)
         print('Aligned sequence #2 (interpolated):\t\t\t', alignmentB)
 
     if interpolationFactor is not None:
@@ -323,8 +327,10 @@ def nCascadingNWA(sequence,
             alignmentB[alignmentB >= 0]/interpolationFactor) % (templatePeriod)
         rollFactor = (rollFactor/interpolationFactor) % (period)  # TODO: is this the right period?
 
-    if log:
-        print('Aligned sequence #1 (wrapped):\t\t',alignmentAWrapped)
+        if log:
+            print('Rollfactor:\t{0}'.format(rollFactor))
+            print('Aligned sequence #1 (wrapped):\t\t',alignmentAWrapped)
+            print('Aligned sequence #2:\t\t\t', alignmentB)
 
     # roll Alignment A, taking care of indels
     alignmentA = []
@@ -347,51 +353,106 @@ def nCascadingNWA(sequence,
     rollFactor = gtp.getPhase(alignmentA,alignmentB,knownTargetFrame,log)
 
     if log:
+        print('Rollfactor:\t{0}'.format(rollFactor))
         print('Aligned sequence #1 (unwrapped):\t', alignmentA)
         print('Aligned sequence #2:\t\t\t', alignmentB)
     
     return alignmentA, alignmentB, rollFactor, score
 
-def linInterp(string,position):
-    #only for toy examples
-    if position//1 == position:
-        return string[int(position)]  # equivalent to np.floor(position).astype(np.int)
-    else:
-        interPos = position-(position//1)
-        return string[int(position)] + interPos*(string[int(position+1)]-string[int(position)])  # int(position+1) is equivalent to np.ceil(position).astype(np.int)
+
+def runToySequences(roll=5, gapPenalty=0, shape=(1,1), log=False):
+    '''Compiles all numba functions in module.'''
+
+    # Toy Example
+    # toySequenceA and B have very slightly different rhythms but the same period
+    toySequenceA = np.asarray([100, 150, 175, 200, 225, 230, 205, 180, 155, 120],dtype='uint8')
+    toySequenceA = np.roll(toySequenceA, -roll)
+    periodA = toySequenceA.shape[0]
+    toySequenceB = np.asarray([100, 125, 150, 175, 200, 225, 230, 205, 180, 120],dtype='uint8')
+    periodB = toySequenceB.shape[0] # -0.5
+    if log:
+        print('Running toy example with:')
+        print('\tSequence A: ', toySequenceA)
+        print('\tSequence B: ', toySequenceB)
+
+    # Make sequences 3D arrays (as expected for this algorithm)
+    ndSequenceA = toySequenceA[:, np.newaxis, np.newaxis]
+    ndSequenceB = toySequenceB[:, np.newaxis, np.newaxis]
+    ndSequenceA = np.repeat(np.repeat(ndSequenceA,shape[0],1),shape[1],2)  # make each frame actually 2D to check everything works for image frames
+    ndSequenceB = np.repeat(np.repeat(ndSequenceB,shape[0],1),shape[1],2)
+
+    alignmentA, alignmentB, rollFactor, score = nCascadingNWA(ndSequenceA, ndSequenceB, periodA, periodB, gapPenalty=gapPenalty, log=log)
+    if log:
+        print('Roll factor: {0} (score: {1})'.format(rollFactor, score))
+        print('Alignment Maps:')
+        print('\tMap A: {0}'.format(alignmentA))
+        print('\tMap B: {0}'.format(alignmentB))
+        # print('\tA\t\tB')
+        # print('\n'.join(['{0:08.2f}\t{1:08.2f}'.format(a,b) for (a,b) in zip(alignmentA,alignmentB)]))
+
+    # Outputs for toy examples
+    alignedSequenceA = []  # Create new lists to fill with aligned values
+    alignedSequenceB = []
+    for i in alignmentA:  # fill new sequence A
+        if i < 0:  # indel
+            alignedSequenceA.append(-1)
+        else:
+            alignedSequenceA.append(linInterp(ndSequenceA, i)[0,0])
+    for i in alignmentB:  # fill new sequence B
+        if i < 0:  # indel
+            alignedSequenceB.append(-1)
+        else:
+            alignedSequenceB.append(linInterp(ndSequenceB, i)[0,0])
+
+    # Print
+    score = 0
+    for i,j in zip(alignedSequenceA,alignedSequenceB):
+        if i>-1 and j>-1:
+            i = float(i)
+            j = float(j)
+            score = score - np.abs(i-j)
+        elif i>-1:
+            score = score - i
+        elif j>-1:
+            score = score - j
+    if log:
+        print('\nAligned Sequences:')
+        # print('\tSequence A: ', alignedSequenceA)
+        # print('\tSequence B: ', alignedSequenceB)
+        print('\tA\t\tB')
+        print('\n'.join(['{0:8.2f}\t{1:8.2f}'.format(a,b) for (a,b) in zip(alignedSequenceA,alignedSequenceB)]))
+        print('Final Score: {0}'.format(score))
+
+    return None
+
 
 if __name__ == '__main__':
-    print('Running toy example with')
-    #Toy Example
-    str1 = [0,64,192,255,255,192,128,128,64,0]
-    str2 = [255,192,128,128,64,0,64,64,64,128,192,255]
-    print('Sequence #1: {0}'.format(str1))
-    print('Sequence #2: {0}'.format(str2))
-    sequence  = np.asarray(str1,'uint8').reshape([len(str1),1,1])
-    templateSequence  = np.asarray(str2,'uint8').reshape([len(str2),1,1])
-    sequence = np.repeat(np.repeat(sequence,10,1),5,2)
-    templateSequence = np.repeat(np.repeat(templateSequence,10,1),5,2)
+    # # Compile (if using Numba)
+    # t = time.time()
+    # runToySequences(seqA='simple', log=False)
+    # print('Compilation run took {0:.2f} milliseconds.'.format(1000*(time.time()-t)))
 
-    alignment1, alignment2, rF, score = nCascadingNWA(sequence,templateSequence,9.5,11.25,interpolationFactor=1,log=True)
-    print(rF)
+    # Run - timed
+    # t = time.time()
+    # runToySequences(seqA='simple', log=False)
+    # print('Post-compilation run took {0:.2f} milliseconds.'.format(1000*(time.time()-t)))
 
-    # Outputs for toy examples - Need to make deal with floats
-    strout1 = []
-    strout2 = []
-    for i in alignment1:
-        # print(i)
-        if i<0:
-            strout1.append(-1)
-        else:
-            strout1.append(linInterp(str1,i))
-    for i in alignment2:
-        # print(i)
-        if i<0:
-            strout2.append(-1)
-        else:
-            strout2.append(linInterp(str2,i))
-    print('\n'.join('{0}\t{1}'.format(a, b) for a, b in zip(strout1, strout2)))
+    # # Run - Python (if using Numba)
+    # t = time.time()
+    # runToySequences.py_func(seqA='simple', log=False)
+    # print('Equivalent Python run took {0:.2f} milliseconds.'.format(1000*(time.time()-t)))
 
+    # Profiler
+    # pr = cProfile.Profile()
+    # pr.enable()
 
-    # alignment1, alignment2, rF = nCascadingNWA(sequence,templateSequence,9.5,11.25,interpolationFactor=4,log=True)
-    # print(rF)
+    # Run - verbose
+    runToySequences(roll=7, gapPenalty=1, shape=(1024,1024), log=True)
+
+    # Profile
+    # pr.disable()
+    # s = io.StringIO()
+    # sortby = pstats.SortKey.CUMULATIVE
+    # ps = pstats.Stats(pr, stream=s).strip_dirs().sort_stats(sortby)
+    # ps.print_stats()
+    # print(s.getvalue())
