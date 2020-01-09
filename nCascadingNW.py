@@ -4,13 +4,72 @@ This module includes all necessary functions.'''
 
 # Python Imports
 import numpy as np
-import math
-from scipy.interpolate import interpn
 import sys
 import getPhase as gtp
 # Local Imports
 sys.path.insert(0, '../py_sad_correlation/')
 import j_py_sad_correlation as jps
+
+
+def linInterp(string, floatPosition):
+    '''A linear interpolation function for a 'string' of ND items
+    Note: this is, currently, only for uint8 images
+    '''
+    # Bottom position
+    # equivalent to np.floor(floatPosition).astype('int)
+    botPos = int(floatPosition)
+
+    if floatPosition//1 == floatPosition:
+        # equivalent to string[np.floor(floatPosition).astype('int)]
+        interVal = 1.0*string[botPos]  # 1.0* needed to force numba type
+    else:
+        # Interpolation Ratio
+        interPos = floatPosition-(floatPosition//1)
+
+        # Top position
+        topPos = int(np.ceil(floatPosition))
+
+        # Values
+        botVal = string[botPos]
+        topVal = string[topPos]
+
+        interVal = botVal + interPos*(topVal - botVal)
+    
+    interValInt = interVal.astype(np.uint8)
+
+    return interValInt
+
+def interpolateImageSeries(sequence, period, interpolationFactor=1):
+    '''Interpolate a series of images along a 'time' axis.
+    Note: this is, currently, only for uint8 images
+
+    Inputs:
+    * series: a PxMxN numpy array contain P images of size MxN
+      * P is a time-like axis, e.g. time or phase.
+    * period: float period length in units of frames
+    * interpolationFactor: integer interpolation factor, e.g. 2 doubles the series length
+
+    Outputs:
+    * interpolatedSeries: a P'xMxN numpy array
+      * Contains np.ceil(interpolationFactor*period) frames, i.e. P'<=interpolationFactor*P
+    '''
+    
+    # Original coordinates
+    (p, m, n) = sequence.shape
+
+    # Interpolated space coordinates
+    idtOut = np.arange(0, period, 1/interpolationFactor)  # supersample
+    pOut = len(idtOut)
+
+    # Sample at interpolated coordinates
+    interpolatedSeries = np.zeros((pOut,m,n),dtype=np.uint8)
+    for i in np.arange(idtOut.shape[0]):
+        if idtOut[i]+1>len(sequence):  # boundary condition
+            interpolatedSeries[i,...] = sequence[-1]  # TODO - this is very simplistic
+        else:
+            interpolatedSeries[i,...] = linInterp(sequence,idtOut[i])
+
+    return interpolatedSeries
 
 
 def constructCascade(scores, gp=0):
@@ -36,30 +95,13 @@ def constructCascade(scores, gp=0):
     return nwa
 
 
-def interpImageSeriesZ(sequence, period, interp):
-        x = np.arange(0, sequence.shape[1])
-        y = np.arange(0, sequence.shape[2])
-        z = np.arange(0, sequence.shape[0])
-
-        # interp whole sequence
-        zOut = np.linspace(0.0,
-                           sequence.shape[0]-1,
-                           sequence.shape[0]*interp)
-        interpPoints = np.asarray(np.meshgrid(zOut, x, y, indexing='ij'))
-        interpPoints = np.rollaxis(interpPoints, 0, 4)
-        sequence = interpn((z, x, y), sequence, interpPoints)
-        sequence = np.asarray(sequence, dtype=sequence.dtype)
-
-        # take only up to first period
-        return sequence[:int(period*interp), :, :]
-
 def nCascadingNWA(seq1,
                   seq2,
                   period1,
                   period2,
                   gapPenalty=0,
-                  interp=1,
-                  target=0,
+                  interpolationFactor=1,
+                  knownTargetFrame=0,
                   log=True):
     ''' Assumes seq1 and seq2 are 3D numpy arrays of [t,x,y]'''
     if log:
@@ -68,18 +110,18 @@ def nCascadingNWA(seq1,
     ls1 = float(len(seq1))
     ls2 = float(len(seq2))
 
-    if interp>1:
+    if interpolationFactor is not None:
       if log:
-          print('Interpolating by a factor of {0} for greater precision'.format(interp))
-      seq1 = interpImageSeriesZ(seq1,period1,interp)
-      seq2 = interpImageSeriesZ(seq2,period2,interp)
+          print('Interpolating by a factor of {0} for greater precision'.format(interpolationFactor))
+      seq1 = interpolateImageSeries(seq1, period1, interpolationFactor=interpolationFactor)
+      seq2 = interpolateImageSeries(seq2, period1, interpolationFactor=interpolationFactor)
       if log:
           print('Sequence #1 has {0} frames and sequence #2 has {1} frames'.format(len(seq1),len(seq2)))
           print(seq1[:,0,0])
           print(seq2[:,0,0])
     else:
       if log:
-          print('No interpolation required'.format(interp))
+          print('No interpolation required'.format(interpolationFactor))
           print(seq1[:,0,0])
           print(seq2[:,0,0])
 
@@ -125,8 +167,8 @@ def nCascadingNWA(seq1,
     traversing = True
 
     # Trace without wrapping
-    alignment1 = np.zeros((0,))
-    alignment2 = np.zeros((0,))
+    alignment1 = []
+    alignment2 = []
     while traversing:
       xup = x-1
       yleft =  y-1
@@ -157,21 +199,21 @@ def nCascadingNWA(seq1,
       direction = np.argmax(options)
 
       if direction==1:
-          alignment1 = np.append(alignment1,-1)
-          alignment2 = np.append(alignment2,xup)
+          alignment1.append(-1)
+          alignment2.append(xup)
           x = xup
           if log == 'Mega':
               print('Direction Travelled:\tI\'ve gone up')
       elif direction==0:
-          alignment1 = np.append(alignment1,yleft)
-          alignment2 = np.append(alignment2,xup)
+          alignment1.append(yleft)
+          alignment2.append(xup)
           x = xup
           y = yleft
           if log == 'Mega':
               print('Direction Travelled:\tI\'ve gone diagonal')
       elif direction==2:
-          alignment1 = np.append(alignment1,yleft)
-          alignment2 = np.append(alignment2,-1)
+          alignment1.append(yleft)
+          alignment2.append(-1)
           y = yleft
           if log == 'Mega':
               print('Direction Travelled:\tI\'ve gone left')
@@ -181,15 +223,15 @@ def nCascadingNWA(seq1,
           traversing = False
 
     # Reverses sequence
-    alignment1 = alignment1[::-1]
-    alignment2 = alignment2[::-1]
+    alignment1 = np.asarray(alignment1[::-1],dtype=np.float)
+    alignment2 = np.asarray(alignment2[::-1],dtype=np.float)
 
-    if interp>1:
+    if interpolationFactor is not None:
       if log:
           print('De-interpolating for result...')
-      alignment1[alignment1>=0] = (alignment1[alignment1>=0]/interp)%(period1-1)
-      alignment2[alignment2>=0] = (alignment2[alignment2>=0]/interp)%(period2-1)
-      # rollFactor = rollFactor/interp
+      alignment1[alignment1>=0] = (alignment1[alignment1>=0]/interpolationFactor)%(period1-1)
+      alignment2[alignment2>=0] = (alignment2[alignment2>=0]/interpolationFactor)%(period2-1)
+      rollFactor = rollFactor/interpolationFactor
 
     if log:
       print('Aligned sequence #1 (wrapped):\t\t',alignment1)
@@ -199,8 +241,7 @@ def nCascadingNWA(seq1,
           alignment1[i] = (alignment1[i]-rollFactor)%(period1)
 
     # get rollFactor properly
-    # print(target,alignment1)
-    rollFactor = gtp.getPhase(alignment1,alignment2,target,log)
+    rollFactor = gtp.getPhase(alignment1,alignment2,knownTargetFrame,log)
 
     if log:
       print('Aligned sequence #1 (unwrapped):\t',alignment1)
@@ -211,10 +252,10 @@ def nCascadingNWA(seq1,
 def linInterp(string,position):
     #only for toy examples
     if position//1 == position:
-        return string[math.floor(position)]
+        return string[int(position)]  # equivalent to np.floor(position).astype(np.int)
     else:
         interPos = position-(position//1)
-        return string[math.floor(position)] + interPos*(string[math.ceil(position)]-string[math.floor(position)])
+        return string[int(position)] + interPos*(string[int(position+1)]-string[int(position)])  # int(position+1) is equivalent to np.ceil(position).astype(np.int)
 
 if __name__ == '__main__':
     print('Running toy example with')
@@ -228,7 +269,7 @@ if __name__ == '__main__':
     seq1 = np.repeat(np.repeat(seq1,10,1),5,2)
     seq2 = np.repeat(np.repeat(seq2,10,1),5,2)
 
-    alignment1, alignment2, rF, score = nCascadingNWA(seq1,seq2,9.5,11.25,interp=1,log=True)
+    alignment1, alignment2, rF, score = nCascadingNWA(seq1,seq2,9.5,11.25,interpolationFactor=1,log=True)
     print(rF)
 
     # Outputs for toy examples - Need to make deal with floats
@@ -249,5 +290,5 @@ if __name__ == '__main__':
     print('\n'.join('{0}\t{1}'.format(a, b) for a, b in zip(strout1, strout2)))
 
 
-    # alignment1, alignment2, rF = nCascadingNWA(seq1,seq2,9.5,11.25,interp=4,log=True)
+    # alignment1, alignment2, rF = nCascadingNWA(seq1,seq2,9.5,11.25,interpolationFactor=4,log=True)
     # print(rF)
