@@ -82,96 +82,156 @@ def interpolateImageSeries(sequence, period, interpolationFactor=1):
     return interpolatedSeries
 
 
-def constructCascade(scores, gp=0):
-    # Construct grid
-    nwa = np.zeros([scores.shape[0]+1,
-                    scores.shape[1]+1],
-                    'float')
+def fillTracebackMatrix(scoreMatrix, gapPenalty=0, log=False):
+    tracebackMatrix = np.zeros((scoreMatrix.shape[0]+1, scoreMatrix.shape[1]+1), dtype=np.float64)
+    
+    for t2 in np.arange(tracebackMatrix.shape[0]):  # for all rows
+        
+        if t2 == 0:  # if the first row
+            for t1 in np.arange(1, tracebackMatrix.shape[1]):  # for all but first column
+                
+                matchScore = scoreMatrix[t2-1, t1-1]  # get score for this combination (i.e. high score for a match)
+                
+                # left == insert gap into sequenceA
+                insert = tracebackMatrix[t2, t1-1] - gapPenalty - matchScore  # get score to the left plus the gapPenalty (same as (t1)*gapPenalty)
 
-    for t2 in range(scores.shape[0]+1):
-        if t2 == 0:
-            for t1 in range(1, scores.shape[1]+1):
-                mn = nwa[t2, t1-1]+gp
-                nwa[t2, t1] = mn-scores[t2-1, t1-1]
-        else:
-            for t1 in range(scores.shape[1]+1):
-                if t1 == 0:
-                    mn = nwa[t2-1, t1]+gp
+                tracebackMatrix[t2, t1] = insert
+                
+        else:  # if any but the first row
+            
+            for t1 in np.arange(tracebackMatrix.shape[1]):  # for all columns
+                if t1 == 0:  # if the first column
+                    
+                    matchScore = scoreMatrix[t2-1, t1-1]  # get score for this combination (i.e. high score for a match)
+                    
+                    # above == insert gap into sequenceB (or delete frame for sequenceA)
+                    delete = tracebackMatrix[t2-1, t1] - gapPenalty - matchScore  # get score to the above plus the gapPenalty (same as t2*gapPenalty)
+
+                    tracebackMatrix[t2, t1] = delete# - matchScore
+                    
                 else:
-                    mn = max([nwa[t2-1, t1-1],
-                              nwa[t2, t1-1]+gp,
-                              nwa[t2-1, t1]+gp])
-                nwa[t2, t1] = mn-scores[t2-1, t1-1]
-    return nwa
+                    
+                    matchScore = scoreMatrix[t2-1, t1-1]  # get score for this combination (i.e. high score for a match)
+                    
+                    # diagonal
+                    match = tracebackMatrix[t2-1, t1-1] - matchScore
+
+                    # above
+                    delete = tracebackMatrix[t2-1, t1] - gapPenalty - matchScore
+
+                    # left
+                    insert = tracebackMatrix[t2, t1-1] - gapPenalty - matchScore
+
+                    tracebackMatrix[t2, t1] = max([match,insert,delete])  # get maximum score from left, left above and above
+                    
+    return tracebackMatrix
 
 
-def nCascadingNWA(seq1,
-                  seq2,
+def rollScores(scoreMatrix,rollFactor=1,axis=0):
+    rolledScores = np.zeros(scoreMatrix.shape,dtype=scoreMatrix.dtype)
+    for i in np.arange(scoreMatrix.shape[axis]):
+        if axis==0:
+            rolledScores[i,:] = scoreMatrix[(i-rollFactor)%scoreMatrix.shape[0],:]
+        elif axis==1:
+            rolledScores[:,i] = scoreMatrix[:,(i-rollFactor)%scoreMatrix.shape[1]]
+    return rolledScores
+
+
+def constructCascade(scoreMatrix, gapPenalty=0, axis=0, log=False):
+    '''Create a 'cascade' of score arrays for use in the Needleman-Wunsch algorith.
+    
+    Inputs:
+    * scoreMatrix: a score MxN array between two semi-periodic sequences
+      * Columns represent one sequence of length M; rows the another of length N
+    * gapPenalty: the Needleman-Wunsch penalty for introducing a gap (zero means no penalty, large means big penalty, i.e. less likely).
+    * axis: the axis along which to roll/cascade
+
+    Outputs:
+    * cascades: a MxNx[M/N] array of cascaded traceback matrices
+      * The third dimension depends on the axis parameter
+    '''
+
+    # Create 3D array to hold all cascades
+    cascades = np.zeros((scoreMatrix.shape[0]+1, scoreMatrix.shape[1]+1, scoreMatrix.shape[0]), dtype=np.float64)
+
+    # Create a new cascaded score array for each alignment (by rolling along axis)
+    for n in np.arange(scoreMatrix.shape[1-axis]):  # the 1-axis tricks means we loop over 0 if axis=1 and vice versa  # TODO this doesn't seem to work?!
+        if log:
+            print('Getting score matrix for roll of {0} frames...'.format(n))
+        cascades[:, :, n] = fillTracebackMatrix(scoreMatrix, gapPenalty=gapPenalty, log=log)
+        scoreMatrix = rollScores(scoreMatrix, 1, axis=axis)
+
+    return cascades
+
+
+def nCascadingNWA(sequence,
+                  templateSequence,
                   period1,
                   period2,
                   gapPenalty=0,
                   interpolationFactor=1,
                   knownTargetFrame=0,
                   log=True):
-    ''' Assumes seq1 and seq2 are 3D numpy arrays of [t,x,y]'''
+    ''' Assumes sequence and templateSequence are 3D numpy arrays of [t,x,y]'''
     if log:
-      print('Sequence #1 has {0} frames and sequence #2 has {1} frames;'.format(len(seq1),len(seq2)))
+        print('Sequence #1 has {0} frames and sequence #2 has {1} frames;'.format(len(sequence),len(templateSequence)))
 
-    ls1 = float(len(seq1))
-    ls2 = float(len(seq2))
+    ls1 = float(len(sequence))
+    ls2 = float(len(templateSequence))
 
     if interpolationFactor is not None:
       if log:
           print('Interpolating by a factor of {0} for greater precision'.format(interpolationFactor))
-      seq1 = interpolateImageSeries(seq1, period1, interpolationFactor=interpolationFactor)
-      seq2 = interpolateImageSeries(seq2, period1, interpolationFactor=interpolationFactor)
+      sequence = interpolateImageSeries(sequence, period1, interpolationFactor=interpolationFactor)
+      templateSequence = interpolateImageSeries(templateSequence, period1, interpolationFactor=interpolationFactor)
       if log:
-          print('Sequence #1 has {0} frames and sequence #2 has {1} frames'.format(len(seq1),len(seq2)))
-          print(seq1[:,0,0])
-          print(seq2[:,0,0])
+          print('Sequence #1 has {0} frames and sequence #2 has {1} frames'.format(len(sequence),len(templateSequence)))
+          print(sequence[:,0,0])
+          print(templateSequence[:,0,0])
     else:
       if log:
           print('No interpolation required'.format(interpolationFactor))
-          print(seq1[:,0,0])
-          print(seq2[:,0,0])
+          print(sequence[:,0,0])
+          print(templateSequence[:,0,0])
 
-    # Calculate SSDs - C++
-    ssds = jps.sad_grid(seq1, seq2)
+    # Calculate Score Matrix - C++
+    scoreMatrix = jps.sad_grid(sequence, templateSequence)
 
     if log:
-      print ('Score matrix:')
-      print(ssds)
-      print('Shape: ({0},{1})'.format(ssds.shape[0],ssds.shape[1]))
+        print ('Score matrix:')
+        print(scoreMatrix)
+        print('Shape: ({0},{1})'.format(scoreMatrix.shape[0],scoreMatrix.shape[1]))
+        
+    # Cascade the SAD Grid
+    cascades = constructCascade(scoreMatrix, gapPenalty=gapPenalty, axis=1, log=log=='verbose')
+    if log:
+        print('Unrolled Traceback Matrix:')
+        print(cascades[:,:,0])
+        print('\tDtype: {0};\tShape: ({1},{2},{3})'.format(cascades.dtype, cascades.shape[0], cascades.shape[1], cascades.shape[2]))
 
-    # Make Cascades
-    cascades = np.zeros([len(seq2)+1,len(seq1)+1,len(seq1)],'float')
-    for n in range(len(seq1)):
-      cascades[:,:,n] = constructCascade(ssds,gapPenalty)
-      ssds = np.roll(ssds,1,axis=1)
-
-    # Pick Cascade and Roll Seq1
-    rollFactor = np.argmax(cascades[len(seq2),len(seq1),:])
-    score = np.amax(cascades[len(seq2),len(seq1),:])
+    # Pick Cascade and Roll sequence
+    rollFactor = np.argmax(cascades[len(templateSequence),len(sequence),:])
+    score = np.amax(cascades[len(templateSequence),len(sequence),:])
     # f1 = plt.figure()
     # a1 = f1.add_subplot(111)
-    # a1.plot(cascades[len(seq2),len(seq1),:])
+    # a1.plot(cascades[len(templateSequence),len(sequence),:])
     # a1.scatter(rollFactor,score,s=80,c='k')
-    # print(score,np.iinfo(seq1.dtype).max,seq1.size)
-    score = (score + (np.iinfo(seq1.dtype).max * seq1.size/10))/(np.iinfo(seq1.dtype).max * seq1.size/10)
+    # print(score,np.iinfo(sequence.dtype).max,sequence.size)
+    score = (score + (np.iinfo(sequence.dtype).max * sequence.size/10))/(np.iinfo(sequence.dtype).max * sequence.size/10)
     if score<=0:
-      print('ISSUE: Negative Score')
+        print('ISSUE: Negative Score')
     score = 0 if score<0 else score#
     # print(score)
     nwa = cascades[:,:,rollFactor]
-    seq1 = np.roll(seq1,rollFactor,axis=2)
+    sequence = np.roll(sequence,rollFactor,axis=2)
     if log:
-      print('Cascade scores:\t',cascades[len(seq2),len(seq1),:])
-      print ('Chose cascade {0} of {1}:'.format(rollFactor,len(seq1)))
-      print(nwa)
-      print('Shape: ({0},{1})'.format(nwa.shape[0],nwa.shape[1]))
+        print('Cascade scores:\t',cascades[len(templateSequence),len(sequence),:])
+        print ('Chose cascade {0} of {1}:'.format(rollFactor,len(sequence)))
+        print(nwa)
+        print('Shape: ({0},{1})'.format(nwa.shape[0],nwa.shape[1]))
 
-    x = len(seq2)
-    y = len(seq1)
+    x = len(templateSequence)
+    y = len(sequence)
 
     #  Traverse grid
     traversing = True
@@ -274,12 +334,12 @@ if __name__ == '__main__':
     str2 = [255,192,128,128,64,0,64,64,64,128,192,255]
     print('Sequence #1: {0}'.format(str1))
     print('Sequence #2: {0}'.format(str2))
-    seq1  = np.asarray(str1,'uint8').reshape([len(str1),1,1])
-    seq2  = np.asarray(str2,'uint8').reshape([len(str2),1,1])
-    seq1 = np.repeat(np.repeat(seq1,10,1),5,2)
-    seq2 = np.repeat(np.repeat(seq2,10,1),5,2)
+    sequence  = np.asarray(str1,'uint8').reshape([len(str1),1,1])
+    templateSequence  = np.asarray(str2,'uint8').reshape([len(str2),1,1])
+    sequence = np.repeat(np.repeat(sequence,10,1),5,2)
+    templateSequence = np.repeat(np.repeat(templateSequence,10,1),5,2)
 
-    alignment1, alignment2, rF, score = nCascadingNWA(seq1,seq2,9.5,11.25,interpolationFactor=1,log=True)
+    alignment1, alignment2, rF, score = nCascadingNWA(sequence,templateSequence,9.5,11.25,interpolationFactor=1,log=True)
     print(rF)
 
     # Outputs for toy examples - Need to make deal with floats
@@ -300,5 +360,5 @@ if __name__ == '__main__':
     print('\n'.join('{0}\t{1}'.format(a, b) for a, b in zip(strout1, strout2)))
 
 
-    # alignment1, alignment2, rF = nCascadingNWA(seq1,seq2,9.5,11.25,interpolationFactor=4,log=True)
+    # alignment1, alignment2, rF = nCascadingNWA(sequence,templateSequence,9.5,11.25,interpolationFactor=4,log=True)
     # print(rF)
