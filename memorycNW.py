@@ -73,6 +73,8 @@ def processNewReferenceSequence(rawRefFrames,
                     driftHistory,
                     shifts,
                     -1000.0,
+                    None,
+                    None,
                     None)
     # And that shape is compatible with the history that we already have
     if len(sequenceHistory) > 1:
@@ -86,6 +88,8 @@ def processNewReferenceSequence(rawRefFrames,
                     driftHistory,
                     shifts,
                     -1000.0,
+                    None,
+                    None,
                     None)
 
     # Add latest reference frames to our sequence set
@@ -201,7 +205,15 @@ def processNewReferenceSequence(rawRefFrames,
         print('residuals:')
         pprint(residuals)
         print('Reference Frame rolling by: {0}'.format(globalShiftSolution[-1]))
-
+        
+    # Catch for outputs on first period
+    if (len(sequenceHistory) == 1):
+        score = 0
+        alignment1 = []
+        
+    # Count indels in last returned alignment ## TODO - is this ideal?
+    indels = np.sum(alignment1==-1)
+    
     # Note for developers:
     # there are two other return statements in this function
     return (sequenceHistory,
@@ -209,4 +221,6 @@ def processNewReferenceSequence(rawRefFrames,
             driftHistory,
             shifts,
             globalShiftSolution[-1],
-            residuals)
+            residuals,
+            indels,
+            score)

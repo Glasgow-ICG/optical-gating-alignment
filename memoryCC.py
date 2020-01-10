@@ -71,6 +71,8 @@ def processNewReferenceSequence(rawRefFrames,
                     driftHistory,
                     shifts,
                     -1000.0,
+                    None,
+                    None,
                     None)
     # And that shape is compatible with the history that we already have
     if len(resampledSequences) > 1:
@@ -84,6 +86,8 @@ def processNewReferenceSequence(rawRefFrames,
                     driftHistory,
                     shifts,
                     -1000.0,
+                    None,
+                    None,
                     None)
 
     # Add latest reference frames to our sequence set
@@ -183,6 +187,10 @@ def processNewReferenceSequence(rawRefFrames,
     if log:
         print('residuals:')
         pprint(residuals)
+        
+    # Catch for outputs on first period
+    if (len(resampledSequences) == 1):
+        score = 0
 
     # Note for developers:
     # there are two other return statements in this function
@@ -191,7 +199,9 @@ def processNewReferenceSequence(rawRefFrames,
             driftHistory,
             shifts,
             globalShiftSolution[-1],
-            residuals)
+            residuals,
+            score,
+            None)
 
 
 if __name__ == '__main__':
