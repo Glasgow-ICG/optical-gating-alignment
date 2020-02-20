@@ -12,8 +12,7 @@ import warnings
 import simpleCC as scc
 import nCascadingNW as cnw
 import accountForDrift as afd
-sys.path.insert(0, '../j_postacquisition/')
-import shifts_global_solution as sgs
+import globalSolution as gs
 
 
 def processNewReferenceSequence(rawRefFrames,
@@ -179,7 +178,7 @@ def processNewReferenceSequence(rawRefFrames,
         print('printing shifts')
         pprint(shifts)
 
-    (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts,
+    (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = gs.MakeShiftsSelfConsistent(shifts,
                                                                                                                                 len(sequenceHistory),
                                                                                                                                 periodHistory,
                                                                                                                                log=log,

@@ -11,8 +11,7 @@ import warnings
 # Local Imports
 import simpleCC as scc
 import accountForDrift as afd
-sys.path.insert(0, '../j_postacquisition/')
-import shifts_global_solution as sgs
+import globalSolution as gs
 
 
 def processNewReferenceSequence(rawRefFrames,
@@ -162,7 +161,7 @@ def processNewReferenceSequence(rawRefFrames,
     if log:
         pprint(shifts)
 
-    (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = sgs.MakeShiftsSelfConsistent(shifts,
+    (globalShiftSolution, adjustedShifts, adjacentSolution, residuals, initialAdjacentResiduals) = gs.MakeShiftsSelfConsistent(shifts,
                                                                                                                                 len(resampledSequences),
                                                                                                                                 numSamplesPerPeriod,
                                                                                                                                 knownPhaseIndex,
