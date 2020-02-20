@@ -7,3 +7,4 @@ TODO:
 - [ ] Update PipFile
 - [ ] Create __main__ tests
 - [ ] add JT's sgs somehow
+- [ ] Fix rcond future warning in sgs
