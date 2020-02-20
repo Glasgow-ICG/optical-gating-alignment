@@ -39,7 +39,9 @@ def SolveWithMaxRange(shifts, numSequences, maxRange, knownPhaseIndex, knownPhas
 def AdjustShiftsToMatchSolution(shifts, partialShiftSolution, periods, warnUpTo=65536):
     # Now adjust the longer-distance shifts so they match our initial solution
     adjustedShifts = []
-    if isinstance(periods, (int, long)) or len(periods)==1:
+    # DEVNOTE: JT's original code has isinstance (periods, (int,long))
+    # This is Python2 syntac and not needed in Python3
+    if isinstance(periods, int) or len(periods)==1:
         period = periods
     for n in range(len(shifts)):
         (i, j, shift, score) = shifts[n]
