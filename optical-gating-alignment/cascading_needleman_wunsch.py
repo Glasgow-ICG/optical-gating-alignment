@@ -55,8 +55,7 @@ def get_roll_factor(alignment1, alignment2, phase1):
             ):
                 # not gap and not started and is smallest in alignment1
                 # but is greater than phase, i.e. target is between the wrap point
-                logger.info(
-                    "Desired phase at alignment sequence 1 wrap point (type1)")
+                logger.info("Desired phase at alignment sequence 1 wrap point (type1)")
                 # set lower and upper bound and stop searching
                 lower_bound = idx1 - 1
                 upper_bound = idx1
@@ -80,8 +79,7 @@ def get_roll_factor(alignment1, alignment2, phase1):
                 break
             elif allow and alignment1[idx1] == 0:
                 # started and wrap point (not gap implied)
-                logger.info(
-                    "Desired phase at alignment sequence 1 wrap point (type2)")
+                logger.info("Desired phase at alignment sequence 1 wrap point (type2)")
                 lower_bound = idx1 - 1
                 upper_bound = idx1
                 logger.debug(
@@ -129,10 +127,8 @@ def get_roll_factor(alignment1, alignment2, phase1):
             alignment1[upper_bound % length1] - alignment1[lower_bound]
         )
 
-        logger.info(
-            "Phase positioned at interpolated index {0} in alignment 1", idxPos)
-        idxPos = (interpolated_index1 *
-                  (upper_bound - lower_bound)) + lower_bound
+        logger.info("Phase positioned at interpolated index {0} in alignment 1", idxPos)
+        idxPos = (interpolated_index1 * (upper_bound - lower_bound)) + lower_bound
 
         logger.debug(
             phase1,
@@ -157,8 +153,7 @@ def get_roll_factor(alignment1, alignment2, phase1):
     ):
         # index is integer, less than the length of alignment sequence 2 and that position isn't a gap
         phase2 = alignment2[int(idxPos)]
-        logger.info(
-            "Exact index used in alignment 2 to give a phase of {0}", phase1)
+        logger.info("Exact index used in alignment 2 to give a phase of {0}", phase1)
         logger.debug(alignment2[int(idxPos)])
 
     else:
@@ -274,8 +269,7 @@ def interpolate_image_sequence(sequence, period, interpolation_factor=1):
     (_, m, n) = sequence.shape
 
     # Interpolated space coordinates
-    p_indices_out = np.arange(
-        0, period, 1 / interpolation_factor)  # supersample
+    p_indices_out = np.arange(0, period, 1 / interpolation_factor)  # supersample
     p_out = len(p_indices_out)
 
     # Sample at interpolated coordinates
@@ -294,6 +288,8 @@ def interpolate_image_sequence(sequence, period, interpolation_factor=1):
 
 
 def fill_traceback_matrix(score_matrix, gap_penalty=0):
+    """Using a score matrix, fill out a traceback matrix that can be traversed to identify a valid alignment.
+    """
     traceback_matrix = np.zeros(
         (score_matrix.shape[0] + 1, score_matrix.shape[1] + 1), dtype=np.float64
     )
@@ -327,8 +323,7 @@ def fill_traceback_matrix(score_matrix, gap_penalty=0):
 
                     # above == insert gap into sequenceB (or delete frame for sequenceA)
                     delete = (
-                        traceback_matrix[t2 - 1, t1] -
-                        gap_penalty - match_score
+                        traceback_matrix[t2 - 1, t1] - gap_penalty - match_score
                     )  # get score to the above plus the gap_penalty (same as t2*gap_penalty)
 
                     traceback_matrix[t2, t1] = delete  # - match_score
@@ -343,12 +338,10 @@ def fill_traceback_matrix(score_matrix, gap_penalty=0):
                     match = traceback_matrix[t2 - 1, t1 - 1] - match_score
 
                     # above
-                    delete = traceback_matrix[t2 - 1,
-                                              t1] - gap_penalty - match_score
+                    delete = traceback_matrix[t2 - 1, t1] - gap_penalty - match_score
 
                     # left
-                    insert = traceback_matrix[t2, t1 -
-                                              1] - gap_penalty - match_score
+                    insert = traceback_matrix[t2, t1 - 1] - gap_penalty - match_score
 
                     traceback_matrix[t2, t1] = max(
                         [match, insert, delete]
@@ -358,8 +351,8 @@ def fill_traceback_matrix(score_matrix, gap_penalty=0):
 
 
 def roll_score_matrix(score_matrix, roll_factor=0, axis=0):
-    rolled_score_matrix = np.zeros(
-        score_matrix.shape, dtype=score_matrix.dtype)
+    """Utility function to roll a 2D matrix along a given axis."""
+    rolled_score_matrix = np.zeros(score_matrix.shape, dtype=score_matrix.dtype)
     for i in np.arange(score_matrix.shape[axis]):
         if axis == 0:
             rolled_score_matrix[i, :] = score_matrix[
@@ -388,8 +381,7 @@ def construct_cascade(score_matrix, gap_penalty=0, axis=0):
 
     # Create 3D array to hold all cascades
     cascades = np.zeros(
-        (score_matrix.shape[0] + 1,
-         score_matrix.shape[1] + 1, score_matrix.shape[0]),
+        (score_matrix.shape[0] + 1, score_matrix.shape[1] + 1, score_matrix.shape[0]),
         dtype=np.float64,
     )
 
@@ -398,14 +390,15 @@ def construct_cascade(score_matrix, gap_penalty=0, axis=0):
         score_matrix.shape[1 - axis]
     ):  # the 1-axis tricks means we loop over 0 if axis=1 and vice versa  # TODO this doesn't seem to work?!
         logger.info("Getting score matrix for roll of {0} frames...", n)
-        cascades[:, :, n] = fill_traceback_matrix(
-            score_matrix, gap_penalty=gap_penalty)
+        cascades[:, :, n] = fill_traceback_matrix(score_matrix, gap_penalty=gap_penalty)
         score_matrix = roll_score_matrix(score_matrix, 1, axis=axis)
 
     return cascades
 
 
 def traverse_traceback_matrix(sequence, template_sequence, traceback_matrix):
+    """Traverse a tracbeack matrix and return aligned versions of two sequences.
+    The tempkate_sequence is less likely to have indels inserted."""
     x = template_sequence.shape[0]
     y = sequence.shape[0]
 
@@ -473,8 +466,7 @@ def traverse_traceback_matrix(sequence, template_sequence, traceback_matrix):
                 options[:] = [-np.inf, -np.inf, traceback_matrix[x, y_left]]
             else:
                 logger.warning("Boundary Condition:\tI'm at the top left")
-                logger.warning(
-                    "Boundary Condition:\tI should not have got here!")
+                logger.warning("Boundary Condition:\tI should not have got here!")
                 break
         direction = np.argmax(options)
 
@@ -606,8 +598,7 @@ def cascading_needleman_wunsch(
     )
 
     logger.info("roll_factor (interpolated):\t{0}", roll_factor)
-    logger.info(
-        "Aligned sequence #1 (interpolated, wrapped):\t{0}", alignmentAWrapped)
+    logger.info("Aligned sequence #1 (interpolated, wrapped):\t{0}", alignmentAWrapped)
     logger.info("Aligned sequence #2 (interpolated):\t\t\t{0}", alignmentB)
 
     if interpolation_factor is not None:
@@ -633,8 +624,7 @@ def cascading_needleman_wunsch(
     indels = []
     for position in np.arange(alignmentAWrapped.shape[0]):
         if alignmentAWrapped[position] > -1:
-            alignmentA.append(
-                (alignmentAWrapped[position] - roll_factor) % (period))
+            alignmentA.append((alignmentAWrapped[position] - roll_factor) % (period))
         else:
             idx = position - 1
             before = -1
@@ -658,67 +648,68 @@ def cascading_needleman_wunsch(
 
 
 # if __name__ == "__main__":
-    # roll = 7
-    # gap_penalty = 1
-    # shape = (1024, 1024)
+# roll = 7
+# gap_penalty = 1
+# shape = (1024, 1024)
 
-    # # Toy Example
-    # # toySequenceA and B have very slightly different rhythms but the same period
-    # toySequenceA = np.asarray(
-    #     [100, 150, 175, 200, 225, 230, 205, 180, 155, 120], dtype="uint8"
-    # )
-    # toySequenceA = np.roll(toySequenceA, -roll)
-    # periodA = toySequenceA.shape[0]
-    # toySequenceB = np.asarray(
-    #     [100, 125, 150, 175, 200, 225, 230, 205, 180, 120], dtype="uint8"
-    # )
-    # periodB = toySequenceB.shape[0]  # -0.5
-    # logger.info("Running toy example with:")
-    # logger.info("\tSequence A: ", toySequenceA)
-    # logger.info("\tSequence B: ", toySequenceB)
+# # Toy Example
+# # toySequenceA and B have very slightly different rhythms but the same period
+# toySequenceA = np.asarray(
+#     [100, 150, 175, 200, 225, 230, 205, 180, 155, 120], dtype="uint8"
+# )
+# toySequenceA = np.roll(toySequenceA, -roll)
+# periodA = toySequenceA.shape[0]
+# toySequenceB = np.asarray(
+#     [100, 125, 150, 175, 200, 225, 230, 205, 180, 120], dtype="uint8"
+# )
+# periodB = toySequenceB.shape[0]  # -0.5
+# logger.info("Running toy example with:")
+# logger.info("\tSequence A: ", toySequenceA)
+# logger.info("\tSequence B: ", toySequenceB)
 
-    # # Make sequences 3D arrays (as expected for this algorithm)
-    # ndSequenceA = toySequenceA[:, np.newaxis, np.newaxis]
-    # ndSequenceB = toySequenceB[:, np.newaxis, np.newaxis]
-    # ndSequenceA = np.repeat(
-    #     np.repeat(ndSequenceA, shape[0], 1), shape[1], 2
-    # )  # make each frame actually 2D to check everything works for image frames
-    # ndSequenceB = np.repeat(np.repeat(ndSequenceB, shape[0], 1), shape[1], 2)
+# # Make sequences 3D arrays (as expected for this algorithm)
+# ndSequenceA = toySequenceA[:, np.newaxis, np.newaxis]
+# ndSequenceB = toySequenceB[:, np.newaxis, np.newaxis]
+# ndSequenceA = np.repeat(
+#     np.repeat(ndSequenceA, shape[0], 1), shape[1], 2
+# )  # make each frame actually 2D to check everything works for image frames
+# ndSequenceB = np.repeat(np.repeat(ndSequenceB, shape[0], 1), shape[1], 2)
 
-    # alignmentA, alignmentB, roll_factor, score = cascading_needleman_wunsch(
-    #     ndSequenceA, ndSequenceB, periodA, periodB, gap_penalty=gap_penalty
-    # )
-    # logger.info("Roll factor: {0} (score: {1})", roll_factor, score)
-    # logger.info("Alignment Maps:")
-    # logger.info("\tMap A: {0}", alignmentA)
-    # logger.info("\tMap B: {0}", alignmentB)
+# alignmentA, alignmentB, roll_factor, score = cascading_needleman_wunsch(
+#     ndSequenceA, ndSequenceB, periodA, periodB, gap_penalty=gap_penalty
+# )
+# logger.info("Roll factor: {0} (score: {1})", roll_factor, score)
+# logger.info("Alignment Maps:")
+# logger.info("\tMap A: {0}", alignmentA)
+# logger.info("\tMap B: {0}", alignmentB)
 
-    # # Outputs for toy examples
-    # alignedSequenceA = []  # Create new lists to fill with aligned values
-    # alignedSequenceB = []
-    # for i in alignmentA:  # fill new sequence A
-    #     if i < 0:  # indel
-    #         alignedSequenceA.append(-1)
-    #     else:
-    #         alignedSequenceA.append(linear_interpolation(ndSequenceA, i)[0, 0])
-    # for i in alignmentB:  # fill new sequence B
-    #     if i < 0:  # indel
-    #         alignedSequenceB.append(-1)
-    #     else:
-    #         alignedSequenceB.append(linear_interpolation(ndSequenceB, i)[0, 0])
+# # Outputs for toy examples
+# alignedSequenceA = []  # Create new lists to fill with aligned values
+# alignedSequenceB = []
+# for i in alignmentA:  # fill new sequence A
+#     if i < 0:  # indel
+#         alignedSequenceA.append(-1)
+#     else:
+#         alignedSequenceA.append(linear_interpolation(ndSequenceA, i)[0, 0])
+# for i in alignmentB:  # fill new sequence B
+#     if i < 0:  # indel
+#         alignedSequenceB.append(-1)
+#     else:
+#         alignedSequenceB.append(linear_interpolation(ndSequenceB, i)[0, 0])
 
-    # # Print
-    # score = 0
-    # for i, j in zip(alignedSequenceA, alignedSequenceB):
-    #     if i > -1 and j > -1:
-    #         i = float(i)
-    #         j = float(j)
-    #         score = score - np.abs(i - j)
-    #     elif i > -1:
-    #         score = score - i
-    #     elif j > -1:
-    #         score = score - j
-    # logger.info("Aligned Sequences:")
-    # logger.info("\tMap A: {0}", alignmentA)
-    # logger.info("\tMap B: {0}", alignmentB)
-    # logger.info("Final Score: {0}", score)
+# # Print
+# score = 0
+# for i, j in zip(alignedSequenceA, alignedSequenceB):
+#     if i > -1 and j > -1:
+#         i = float(i)
+#         j = float(j)
+#         score = score - np.abs(i - j)
+#     elif i > -1:
+#         score = score - i
+#     elif j > -1:
+#         score = score - j
+# logger.info("Aligned Sequences:")
+# logger.info("\tMap A: {0}", alignmentA)
+# logger.info("\tMap B: {0}", alignmentB)
+# logger.info("Final Score: {0}", score)
+
