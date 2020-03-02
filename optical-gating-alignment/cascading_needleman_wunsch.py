@@ -287,7 +287,8 @@ def interpolate_image_sequence(sequence, period, interpolation_factor=1):
 
 
 def fill_traceback_matrix(score_matrix, gap_penalty=0):
-    """Using a score matrix, fill out a traceback matrix that can be traversed to identify a valid alignment.
+    """Using a score matrix, fill out a traceback matrix.
+    This can then be traversed to identify a valid alignment.
     """
     traceback_matrix = np.zeros(
         (score_matrix.shape[0] + 1, score_matrix.shape[1] + 1), dtype=np.float64
