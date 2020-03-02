@@ -2,7 +2,7 @@
 
 import numpy as np
 from loguru import logger
-import helper as hlp
+import optical_gating_alignment.helper as hlp
 
 # Set-up logger
 logger.disable("optical-gating-alignment")
@@ -10,8 +10,7 @@ logger.disable("optical-gating-alignment")
 
 def cross_correlation(sequence1, sequence2):
     """Calculates cross correlation scores for two numpy arrays of order TXY"""
-    temp = np.conj(np.fft.fft(sequence1, axis=0)) * \
-        np.fft.fft(sequence2, axis=0)
+    temp = np.conj(np.fft.fft(sequence1, axis=0)) * np.fft.fft(sequence2, axis=0)
     temp2 = np.fft.ifft(temp, axis=0)
 
     scores = (
@@ -35,20 +34,17 @@ def v_minimum(y1, y2, y3):
     return x, y
 
 
-def minimum_score(scores, v_fitting=True):
+def minimum_score(scores):
     """Calculates the minimum position and value in a list of scores.
-    Can use V-fitting for sub-integer accuracy (v_fitting=True)."""
-    if v_fitting:
-        # V-fitting for sub-integer interpolation
-        # Note that scores is a ring vector
-        # i.e. scores[0] is adjacent to scores[-1]
-        y1 = scores[np.argmin(scores) - 1]  # Works even when minimum is at 0
-        y2 = scores[np.argmin(scores)]
-        y3 = scores[(np.argmin(scores) + 1) % len(scores)]
-        minimum_position, minimum_value = v_minimum(y1, y2, y3)
-    else:
-        # Just use integer minimum
-        minimum_position = np.argmin(scores)
+    Uses V-fitting for sub-integer accuracy."""
+    # V-fitting for sub-integer interpolation
+    # Note that scores is a ring vector
+    # i.e. scores[0] is adjacent to scores[-1]
+
+    y1 = scores[np.argmin(scores) - 1]  # Works even when minimum is at 0
+    y2 = scores[np.argmin(scores)]
+    y3 = scores[(np.argmin(scores) + 1) % len(scores)]
+    minimum_position, minimum_value = v_minimum(y1, y2, y3)
 
     minimum_position = (minimum_position + np.argmin(scores)) % len(scores)
 
