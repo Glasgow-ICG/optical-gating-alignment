@@ -1,6 +1,7 @@
 # Reference period alignment algorithms for adaptive prospective optical gating for time-lapse 3D fluorescence microscopy
 
 [![DeepSource](https://static.deepsource.io/deepsource-badge-dark-mini.svg)](https://deepsource.io/gh/Glasgow-ICG/optical-gating-alignment/?ref=repository-badge)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 ## Chas Nelson and Jonathan Taylor
 
