@@ -28,7 +28,6 @@ def get_roll_factor(alignment1, alignment2, phase1):
         lower_bound = -1
         upper_bound = -1
         # DEVNOTE: the allow flag deals with the scenario that my alignment starts after the desired phase, i.e. alignment[0]>phase1, and wraps latter in the sequence
-        # TODO: distingish the two types of wrap point more clearly
         allow = False  # only turn on if I've seen a value smaller than desired
         length1 = len(alignment1)
         for idx1 in range(length1):
@@ -143,9 +142,9 @@ def get_roll_factor(alignment1, alignment2, phase1):
 
     # Map precise index to alignment2, considering gaps
     # case where phase captured in alignment1 is integer and valid in alignment2
-    # TODO note that the middle criterion is needed because scc alignments may not be the same length!
     phase2 = None
 
+    # DEVNOTE: the middle criterion is needed because alignments may not be the same length
     if (
         (idxPos // 1) == idxPos
         and idxPos < len(alignment2)
@@ -273,12 +272,12 @@ def interpolate_image_sequence(sequence, period, interpolation_factor=1):
     p_out = len(p_indices_out)
 
     # Sample at interpolated coordinates
+    # DEVNOTE: The boundary condition is dealt with simplistically
+    # ... but it works.
     interpolated_sequence = np.zeros((p_out, m, n), dtype=np.uint8)
     for i in np.arange(p_indices_out.shape[0]):
         if p_indices_out[i] + 1 > len(sequence):  # boundary condition
-            interpolated_sequence[i, ...] = sequence[
-                -1
-            ]  # TODO - this is very simplistic
+            interpolated_sequence[i, ...] = sequence[-1]
         else:
             interpolated_sequence[i, ...] = linear_interpolation(
                 sequence, p_indices_out[i]
@@ -388,7 +387,7 @@ def construct_cascade(score_matrix, gap_penalty=0, axis=0):
     # Create a new cascaded score array for each alignment (by rolling along axis)
     for n in np.arange(
         score_matrix.shape[1 - axis]
-    ):  # the 1-axis tricks means we loop over 0 if axis=1 and vice versa  # TODO this doesn't seem to work?!
+    ):  # the 1-axis tricks means we loop over 0 if axis=1 and vice versa
         logger.info("Getting score matrix for roll of {0} frames...", n)
         cascades[:, :, n] = fill_traceback_matrix(score_matrix, gap_penalty=gap_penalty)
         score_matrix = roll_score_matrix(score_matrix, 1, axis=axis)
@@ -611,9 +610,7 @@ def cascading_needleman_wunsch(
         alignmentB[alignmentB >= 0] = (
             alignmentB[alignmentB >= 0] / interpolation_factor
         ) % (template_period)
-        roll_factor = (roll_factor / interpolation_factor) % (
-            period
-        )  # TODO: is this the right period?
+        roll_factor = (roll_factor / interpolation_factor) % (period)
 
         logger.info("roll_factor:\t{0}", roll_factor)
         logger.info("Aligned sequence #1 (wrapped):\t\t{0}", alignmentAWrapped)
@@ -643,7 +640,6 @@ def cascading_needleman_wunsch(
     logger.info("Aligned sequence #1 (unwrapped):\t", alignmentA)
     logger.info("Aligned sequence #2:\t\t\t", alignmentB)
 
-    # TODO Are alignmentA/B lists? MAke them arrays?
     return alignmentA, alignmentB, roll_factor, score
 
 
@@ -712,4 +708,3 @@ def cascading_needleman_wunsch(
 # logger.info("\tMap A: {0}", alignmentA)
 # logger.info("\tMap B: {0}", alignmentB)
 # logger.info("Final Score: {0}", score)
-

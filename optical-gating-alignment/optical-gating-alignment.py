@@ -31,7 +31,9 @@ def process_sequence(
     interp_factor=None,
     gap_penalty=0,
 ):
-    """ Based on memoryCC.process_sequence
+    """ Process a new reference sequence.
+    Requires the historical information to be passed by the user.
+    Returns new historical records that can be used in the next update.
 
     Inputs:
     * this_sequence: a PxMxN numpy array representing the new reference frames
@@ -62,7 +64,6 @@ def process_sequence(
     * shift_history: updated list of shifts calculated for sequence_history
     * global_solution[-1]: roll factor for latest reference frames
     * residuals: residuals on least squares solution"""
-    # TODO deal with Nones for the _history objects (i.e. first runs)
 
     # Deal with this_sequence type
     if type(this_sequence) is list:
@@ -113,7 +114,6 @@ def process_sequence(
             )
 
     # Add latest reference frames to our sequence set
-    # TODO Check if this is actually needed for cNW?
     this_resampled_sequence = hlp.resample_sequence(
         this_sequence, this_period, resampled_period
     )
@@ -232,7 +232,8 @@ def process_sequence(
                         interp_factor=interp_factor,
                         knownTargetFrame=target,
                     )
-            # TODO why are these different? I think cc is correct
+
+            # Append to history
             if algorithm == "cc":
                 shift_history.append(
                     (
@@ -242,7 +243,7 @@ def process_sequence(
                         score,
                     )
                 )
-            if algorithm == "cnw":
+            elif algorithm == "cnw":
                 shift_history.append(
                     (i, len(sequence_history) - 1, roll_factor - target, 1)
                 )  # add score here
@@ -261,8 +262,7 @@ def process_sequence(
     logger.debug("Solution:")
     logger.debug(global_solution)
 
-    # TODO what to do with this?
-    residuals = np.zeros([len(global_solution), ])
+    residuals = np.zeros([len(global_solution),])
     # for i in range(len(global_solution)-1):
     #     for shift in shift_history:
     #         if shift[1] == shift_history[-1][1] and shift[0] == i:
@@ -283,7 +283,7 @@ def process_sequence(
         score = 0
         alignment = []
 
-    # Count indels in last returned alignment ## TODO - is this ideal?
+    # Count indels in last returned alignment
     indels = np.sum(alignment == -1)
 
     # Note for developers:
