@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "optical-gating-alignment"
-version = "0.1.0"
+version = "2.0.0"
 description = ""
 authors = ["Chas Nelson <chasnelson@glasgow.ac.uk>"]
 
