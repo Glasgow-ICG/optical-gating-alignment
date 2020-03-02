@@ -40,8 +40,8 @@ def solve_for_shifts(shifts, number_of_sequences, ref_seq_id, ref_seq_phase):
 def solve_with_maximum_range(
     shifts, number_of_sequences, maximum_range, ref_seq_id, ref_seq_phase
 ):
-"""Solve for shifts but only use pairwise information for shifts within a certain maximum range of each other,
-i.e. if maximum_range=1 then only use adjacent shifts."""
+    """Solve for shifts but only use pairwise information for shifts within a certain maximum range of each other,
+    i.e. if maximum_range=1 then only use adjacent shifts."""
     shifts_to_use = []
     for shift in shifts:
         # (i, j, shift, score) = shifts[n]
