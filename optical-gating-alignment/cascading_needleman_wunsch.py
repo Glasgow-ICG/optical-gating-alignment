@@ -271,7 +271,7 @@ def interpolate_image_sequence(sequence, period, interpolation_factor=1):
     """
 
     # Original coordinates
-    (p, m, n) = sequence.shape
+    (_, m, n) = sequence.shape
 
     # Interpolated space coordinates
     p_indices_out = np.arange(

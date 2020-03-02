@@ -34,7 +34,7 @@ def solve_for_shifts(shifts, number_of_sequences, ref_seq_id, ref_seq_phase):
     # This weighted least squares is from http://stackoverflow.com/questions/19624997/understanding-scipys-least-square-function-with-irls
     Mw = M * np.sqrt(w[:, np.newaxis])
     aw = a * np.sqrt(w)
-    (sekf_consistent_shifts, residuals, rank, s) = np.linalg.lstsq(Mw, aw)
+    (sekf_consistent_shifts, residuals, _, _) = np.linalg.lstsq(Mw, aw)
     return (sekf_consistent_shifts, residuals)
 
 
@@ -43,7 +43,7 @@ def solve_with_maximum_range(
 ):
     shifts_to_use = []
     for n in range(len(shifts)):
-        (i, j, shift, score) = shifts[n]
+        (i, j, _, _) = shifts[n]
         if j <= i + maximum_range:
             shifts_to_use.append(shifts[n])
     logger.info(
@@ -68,7 +68,8 @@ def adjust_shifts_to_match_solution(shifts, partial_solution, periods, warn_to=6
         (i, j, shift, score) = shifts[n]
         if type(periods) is list and len(periods) > 1:
             period = periods[i]
-        expected_wrapped_shift = (partial_solution[j] - partial_solution[i]) % period
+        expected_wrapped_shift = (
+            partial_solution[j] - partial_solution[i]) % period
         period_part = (
             partial_solution[j] - partial_solution[i]
         ) - expected_wrapped_shift
