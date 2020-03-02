@@ -98,7 +98,9 @@ def get_roll_factor(alignment1, alignment2, phase1):
             logger.critical("Phase not found in alignment sequence 1")
             logger.debug(phase1, alignment1)
             return None
-        elif lower_bound < 0 and upper_bound < 0 and allow:
+
+        # use new if as 'else' redundant due to above return
+        if lower_bound < 0 and upper_bound < 0 and allow:
             # started searching but didn't set bounds
             # assume bounds are around the wrap point
             logger.info("Wrapping around alignment sequence 1")
