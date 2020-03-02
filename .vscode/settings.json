@@ -4,7 +4,7 @@
     "python.formatting.provider": "black",
     "python.testing.pytestArgs": [
         "--cov=optical_gating_alignment"
-        "--cov-reportxml"
+        "--cov-report xml"
         "tests",
     ],
     "python.testing.unittestEnabled": false,
