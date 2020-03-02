@@ -1,6 +1,4 @@
 **/localdata/
 **/__pycache__/
 *.pyc
-test.py
-**/flickBooks/
-**/.ipynb_checkpoints/
+coverage.xml

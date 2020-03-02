@@ -3,7 +3,9 @@
     "python.linting.enabled": false,
     "python.formatting.provider": "black",
     "python.testing.pytestArgs": [
-        "tests"
+        "--cov=optical_gating_alignment"
+        "--cov-reportxml"
+        "tests",
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.nosetestsEnabled": false,
