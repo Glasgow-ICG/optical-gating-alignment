@@ -16,7 +16,7 @@ def get_roll_factor(alignment1, alignment2, phase1):
     # First get the exact index of phase1 in alignment1
     # Case 1: where phase1 is in alignment1
     # i.e. phase1 likely to be a whole number
-    if phase in alignment1:
+    if phase1 in alignment1:
         # DEVNOTE: we assume there is only ever one, which should be true or something has gone awry
         idxPos = np.nonzero(alignment1 == phase1)[0]
         logger.info("Exact phase found at index {0} in alignment 1", idxPos)
@@ -45,7 +45,7 @@ def get_roll_factor(alignment1, alignment2, phase1):
                 logger.debug(
                     "Began searching for bounds at alignment1[{0}]={1}.",
                     idx1,
-                    alignment[idx1],
+                    alignment1[idx1],
                 )
             elif (
                 alignment1[idx1] >= 0
@@ -124,7 +124,7 @@ def get_roll_factor(alignment1, alignment2, phase1):
             upper_bound % length1,
         )
 
-        interpolated_index1 = (phase - alignment1[lower_bound]) / (
+        interpolated_index1 = (phase1 - alignment1[lower_bound]) / (
             alignment1[upper_bound % length1] - alignment1[lower_bound]
         )
 
@@ -134,7 +134,7 @@ def get_roll_factor(alignment1, alignment2, phase1):
                   (upper_bound - lower_bound)) + lower_bound
 
         logger.debug(
-            phase,
+            phase1,
             lower_bound,
             alignment1[lower_bound],
             upper_bound,
@@ -209,7 +209,7 @@ def get_roll_factor(alignment1, alignment2, phase1):
                 )
             ) + alignment2[alignment2_lower_bound]
         logger.info(
-            "Interpolated index used to calculated phase of {0} in alignment 2", phase
+            "Interpolated index used to calculate phase of {0} in alignment 2", phase2
         )
 
         phase2 = phase2 % length2
@@ -435,7 +435,7 @@ def traverse_traceback_matrix(sequence, template_sequence, traceback_matrix):
             x_up,
             y_left,
             traceback_matrix[x_up, y_left],
-            sequence[-ylefy, 0, 0],
+            sequence[-y_left, 0, 0],
             template_sequence[-x_up, 0, 0],
         )
         logger.debug(
