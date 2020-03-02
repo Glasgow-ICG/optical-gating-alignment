@@ -55,7 +55,8 @@ def get_roll_factor(alignment1, alignment2, phase1):
             ):
                 # not gap and not started and is smallest in alignment1
                 # but is greater than phase, i.e. target is between the wrap point
-                logger.info("Desired phase at alignment sequence 1 wrap point (type1)")
+                logger.info(
+                    "Desired phase at alignment sequence 1 wrap point (type1)")
                 # set lower and upper bound and stop searching
                 lower_bound = idx1 - 1
                 upper_bound = idx1
@@ -79,7 +80,8 @@ def get_roll_factor(alignment1, alignment2, phase1):
                 break
             elif allow and alignment1[idx1] == 0:
                 # started and wrap point (not gap implied)
-                logger.info("Desired phase at alignment sequence 1 wrap point (type2)")
+                logger.info(
+                    "Desired phase at alignment sequence 1 wrap point (type2)")
                 lower_bound = idx1 - 1
                 upper_bound = idx1
                 logger.debug(
@@ -126,8 +128,10 @@ def get_roll_factor(alignment1, alignment2, phase1):
             alignment1[upper_bound % length1] - alignment1[lower_bound]
         )
 
-        logger.info("Phase positioned at interpolated index {0} in alignment 1", idxPos)
-        idxPos = (interpolated_index1 * (upper_bound - lower_bound)) + lower_bound
+        logger.info(
+            "Phase positioned at interpolated index {0} in alignment 1", idxPos)
+        idxPos = (interpolated_index1 *
+                  (upper_bound - lower_bound)) + lower_bound
 
         logger.debug(
             phase,
@@ -150,7 +154,8 @@ def get_roll_factor(alignment1, alignment2, phase1):
     ):
         # index is integer, less than the length of alignment sequence 2 and that position isn't a gap
         phase2 = alignment2[int(idxPos)]
-        logger.info("Exact index used in alignment 2 to give a phase of {0}", phase1)
+        logger.info(
+            "Exact index used in alignment 2 to give a phase of {0}", phase1)
         logger.debug(alignment2[int(idxPos)])
         return phase2
     else:
@@ -268,7 +273,8 @@ def interpolate_image_sequence(sequence, period, interpolation_factor=1):
     (p, m, n) = sequence.shape
 
     # Interpolated space coordinates
-    p_indices_out = np.arange(0, period, 1 / interpolation_factor)  # supersample
+    p_indices_out = np.arange(
+        0, period, 1 / interpolation_factor)  # supersample
     p_out = len(p_indices_out)
 
     # Sample at interpolated coordinates
@@ -320,7 +326,8 @@ def fill_traceback_matrix(score_matrix, gap_penalty=0):
 
                     # above == insert gap into sequenceB (or delete frame for sequenceA)
                     delete = (
-                        traceback_matrix[t2 - 1, t1] - gap_penalty - match_score
+                        traceback_matrix[t2 - 1, t1] -
+                        gap_penalty - match_score
                     )  # get score to the above plus the gap_penalty (same as t2*gap_penalty)
 
                     traceback_matrix[t2, t1] = delete  # - match_score
@@ -335,10 +342,12 @@ def fill_traceback_matrix(score_matrix, gap_penalty=0):
                     match = traceback_matrix[t2 - 1, t1 - 1] - match_score
 
                     # above
-                    delete = traceback_matrix[t2 - 1, t1] - gap_penalty - match_score
+                    delete = traceback_matrix[t2 - 1,
+                                              t1] - gap_penalty - match_score
 
                     # left
-                    insert = traceback_matrix[t2, t1 - 1] - gap_penalty - match_score
+                    insert = traceback_matrix[t2, t1 -
+                                              1] - gap_penalty - match_score
 
                     traceback_matrix[t2, t1] = max(
                         [match, insert, delete]
@@ -348,7 +357,8 @@ def fill_traceback_matrix(score_matrix, gap_penalty=0):
 
 
 def roll_score_matrix(score_matrix, roll_factor=0, axis=0):
-    rolled_score_matrix = np.zeros(score_matrix.shape, dtype=score_matrix.dtype)
+    rolled_score_matrix = np.zeros(
+        score_matrix.shape, dtype=score_matrix.dtype)
     for i in np.arange(score_matrix.shape[axis]):
         if axis == 0:
             rolled_score_matrix[i, :] = score_matrix[
@@ -363,7 +373,7 @@ def roll_score_matrix(score_matrix, roll_factor=0, axis=0):
 
 def construct_cascade(score_matrix, gap_penalty=0, axis=0):
     """Create a 'cascade' of score arrays for use in the Needleman-Wunsch algorith.
-    
+
     Inputs:
     * score_matrix: a score MxN array between two semi-periodic sequences
       * Columns represent one sequence of length M; rows the another of length N
@@ -377,7 +387,8 @@ def construct_cascade(score_matrix, gap_penalty=0, axis=0):
 
     # Create 3D array to hold all cascades
     cascades = np.zeros(
-        (score_matrix.shape[0] + 1, score_matrix.shape[1] + 1, score_matrix.shape[0]),
+        (score_matrix.shape[0] + 1,
+         score_matrix.shape[1] + 1, score_matrix.shape[0]),
         dtype=np.float64,
     )
 
@@ -386,7 +397,8 @@ def construct_cascade(score_matrix, gap_penalty=0, axis=0):
         score_matrix.shape[1 - axis]
     ):  # the 1-axis tricks means we loop over 0 if axis=1 and vice versa  # TODO this doesn't seem to work?!
         logger.info("Getting score matrix for roll of {0} frames...", n)
-        cascades[:, :, n] = fill_traceback_matrix(score_matrix, gap_penalty=gap_penalty)
+        cascades[:, :, n] = fill_traceback_matrix(
+            score_matrix, gap_penalty=gap_penalty)
         score_matrix = roll_score_matrix(score_matrix, 1, axis=axis)
 
     return cascades
@@ -460,7 +472,8 @@ def traverse_traceback_matrix(sequence, template_sequence, traceback_matrix):
                 options[:] = [-np.inf, -np.inf, traceback_matrix[x, y_left]]
             else:
                 logger.warning("Boundary Condition:\tI'm at the top left")
-                logger.warning("Boundary Condition:\tI should not have got here!")
+                logger.warning(
+                    "Boundary Condition:\tI should not have got here!")
                 break
         direction = np.argmax(options)
 
@@ -592,7 +605,8 @@ def cascading_needleman_wunsch(
     )
 
     logger.info("roll_factor (interpolated):\t{0}", roll_factor)
-    logger.info("Aligned sequence #1 (interpolated, wrapped):\t{0}", alignmentAWrapped)
+    logger.info(
+        "Aligned sequence #1 (interpolated, wrapped):\t{0}", alignmentAWrapped)
     logger.info("Aligned sequence #2 (interpolated):\t\t\t{0}", alignmentB)
 
     if interpolation_factor is not None:
@@ -703,13 +717,6 @@ if __name__ == "__main__":
         elif j > -1:
             score = score - j
     logger.info("Aligned Sequences:")
-    logger.info("\tA\t\tB")
-    logger.info(
-        "\n".join(
-            [
-                "{0:8.2f}\t{1:8.2f}".format(a, b)
-                for (a, b) in zip(alignedSequenceA, alignedSequenceB)
-            ]
-        )
-    )
+    logger.info("\tMap A: {0}", alignmentA)
+    logger.info("\tMap B: {0}", alignmentB)
     logger.info("Final Score: {0}", score)
