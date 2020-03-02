@@ -160,3 +160,53 @@ def test_minimum_score_multiple():
 
     assert simple and complx and flipped
 
+
+def test_rolling_cross_correlation_uint8():
+    # 'string' with sawtooth intensity pattern
+    string1 = [0, 1, 2, 3, 4, 0]
+    # shifted string (never rolls by zero or period)
+    roll = np.random.randint(1, len(string1) - 1)
+    string2 = np.roll(string1, roll)
+
+    # convert to uint8 'image sequence' (1x1 frame)
+    sequence1 = np.asarray(string1, "uint8").reshape([len(string1), 1, 1])
+    sequence2 = np.asarray(string2, "uint8").reshape([len(string2), 1, 1])
+    # convert to rectangular array (10x5 frame)
+    sequence1 = np.repeat(np.repeat(sequence1, 10, 1), 5, 2)
+    sequence2 = np.repeat(np.repeat(sequence2, 10, 1), 5, 2)
+    # use integer periods
+    period1 = len(string1)
+    period2 = len(string2)
+
+    (alignment1, alignment2, roll_factor, score) = cc.rolling_cross_correlation(
+        sequence1, sequence2, period1, period2
+    )
+
+    # small catch for floating point error
+    assert roll_factor == roll or np.abs(roll_factor - roll) < 1e-6
+
+
+def test_rolling_cross_correlation_uint16():
+    # 'string' with sawtooth intensity pattern
+    string1 = [0, 1, 2, 3, 4, 0]
+    # shifted string (never rolls by zero or period)
+    roll = np.random.randint(1, len(string1) - 1)
+    string2 = np.roll(string1, roll)
+
+    # convert to uint8 'image sequence' (1x1 frame)
+    sequence1 = np.asarray(string1, "uint16").reshape([len(string1), 1, 1])
+    sequence2 = np.asarray(string2, "uint16").reshape([len(string2), 1, 1])
+    # convert to rectangular array (10x5 frame)
+    sequence1 = np.repeat(np.repeat(sequence1, 10, 1), 5, 2)
+    sequence2 = np.repeat(np.repeat(sequence2, 10, 1), 5, 2)
+    # use integer periods
+    period1 = len(string1)
+    period2 = len(string2)
+
+    (alignment1, alignment2, roll_factor, score) = cc.rolling_cross_correlation(
+        sequence1, sequence2, period1, period2
+    )
+
+    # small catch for floating point error
+    assert roll_factor == roll or np.abs(roll_factor - roll) < 1e-6
+

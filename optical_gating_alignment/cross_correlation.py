@@ -52,13 +52,7 @@ def minimum_score(scores):
 
 
 def rolling_cross_correlation(
-    sequence1,
-    sequence2,
-    period1,
-    period2,
-    v_fitting=True,
-    resampled_period=80,
-    target=0,
+    sequence1, sequence2, period1, period2, resampled_period=80, target=0,
 ):
     """Phase matching two sequences based on cross-correlation."""
 
@@ -80,7 +74,7 @@ def rolling_cross_correlation(
     sequence2 = sequence2[:resampled_period].reshape([resampled_period, -1])
     scores = cross_correlation(sequence1, sequence2)
 
-    roll_factor, minimum_value = minimum_score(scores, v_fitting)
+    roll_factor, minimum_value = minimum_score(scores)
     roll_factor = (roll_factor / len(sequence1)) * length2
 
     alignment1 = (np.arange(0, length1) - roll_factor) % length1
@@ -91,38 +85,3 @@ def rolling_cross_correlation(
     logger.info("Rolled by {0}", roll_factor)
 
     return (alignment1, alignment2, (target + roll_factor) % length2, minimum_value)
-
-
-# if __name__ == "__main__":
-#     logger.enable("optical-gating-alignment")
-#     logger.info("Running toy example with")
-#     string1 = [0, 1, 2, 3, 4, 3, 2, 2, 0]
-#     string2 = [4, 3, 2, 1, 0, 0, 1, 1, 1, 2, 3, 4]
-#     logger.info("Sequence #1: {0}", string1)
-#     logger.info("Sequence #2: {0}", string2)
-#     sequence1 = np.asarray(string1, "uint8").reshape([len(string1), 1, 1])
-#     sequence2 = np.asarray(string2, "uint8").reshape([len(string2), 1, 1])
-#     sequence1 = np.repeat(np.repeat(sequence1, 10, 1), 5, 2)
-#     sequence2 = np.repeat(np.repeat(sequence2, 10, 1), 5, 2)
-#     period1 = len(string1) - 1
-#     period2 = len(string2) - 1
-
-#     (alignment1, alignment2, roll_factor, score) = rolling_cross_correlation(
-#         sequence1, sequence2, period1, period2
-#     )
-
-#     # Outputs for toy examples
-#     string_out1 = []
-#     string_out2 = []
-#     for i in alignment1:
-#         if i < 0:
-#             string_out1.append(-1)
-#         else:
-#             string_out1.append(string1[int(round(i % period1))])
-#     for i in alignment2:
-#         if i < 0:
-#             string_out2.append(-1)
-#         else:
-#             string_out2.append(string2[int(round(i % period2))])
-#     logger.info("Aligned Sequence #1: {0}", string_out1)
-#     logger.info("Aligned Sequence #2: {0}", string_out2)
