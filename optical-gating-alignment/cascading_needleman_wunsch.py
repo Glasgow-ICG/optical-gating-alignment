@@ -147,6 +147,8 @@ def get_roll_factor(alignment1, alignment2, phase1):
     # Map precise index to alignment2, considering gaps
     # case where phase captured in alignment1 is integer and valid in alignment2
     # TODO note that the middle criterion is needed because scc alignments may not be the same length!
+    phase2 = None
+
     if (
         (idxPos // 1) == idxPos
         and idxPos < len(alignment2)
@@ -157,7 +159,7 @@ def get_roll_factor(alignment1, alignment2, phase1):
         logger.info(
             "Exact index used in alignment 2 to give a phase of {0}", phase1)
         logger.debug(alignment2[int(idxPos)])
-        return phase2
+
     else:
         length2 = len(alignment2)
         alignment2_lower_bound = np.floor(idxPos)
@@ -214,11 +216,9 @@ def get_roll_factor(alignment1, alignment2, phase1):
 
         phase2 = phase2 % length2
 
-        return phase2
-
-    # Just in case
-    logger.critical("No phase calculated for alignment sequence 2")
-    return None
+    if phase2 is None:
+        logger.critical("No phase calculated for alignment sequence 2")
+    return phase2
 
 
 def linear_interpolation(sequence, float_position):
