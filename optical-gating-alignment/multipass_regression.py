@@ -21,8 +21,8 @@ def solve_for_shifts(shifts, number_of_sequences, ref_seq_id, ref_seq_phase):
     M = np.zeros((len(shifts) + 1, number_of_sequences))
     a = np.zeros(len(shifts) + 1)
     w = a.copy()
-    for n in range(len(shifts)):
-        (i, j, shift, score) = shifts[n]
+    for (n, (i, j, shift, score)) in enumerate(shifts):
+        # (i, j, shift, score) = shifts[n]
         M[n, i] = -1
         M[n, j] = 1
         a[n] = shift
@@ -34,16 +34,16 @@ def solve_for_shifts(shifts, number_of_sequences, ref_seq_id, ref_seq_phase):
     # This weighted least squares is from http://stackoverflow.com/questions/19624997/understanding-scipys-least-square-function-with-irls
     Mw = M * np.sqrt(w[:, np.newaxis])
     aw = a * np.sqrt(w)
-    (sekf_consistent_shifts, residuals, _, _) = np.linalg.lstsq(Mw, aw)
-    return (sekf_consistent_shifts, residuals)
+    (self_consistent_shifts, residuals, _, _) = np.linalg.lstsq(Mw, aw)
+    return (self_consistent_shifts, residuals)
 
 
 def solve_with_maximum_range(
     shifts, number_of_sequences, maximum_range, ref_seq_id, ref_seq_phase
 ):
     shifts_to_use = []
-    for n in range(len(shifts)):
-        (i, j, _, _) = shifts[n]
+    for (n, (i, j, _, _)) in enumerate(shifts):
+        # (i, j, shift, score) = shifts[n]
         if j <= i + maximum_range:
             shifts_to_use.append(shifts[n])
     logger.info(
@@ -64,8 +64,8 @@ def adjust_shifts_to_match_solution(shifts, partial_solution, periods, warn_to=6
     # This is Python2 syntac and not needed in Python3
     if isinstance(periods, int) or len(periods) == 1:
         period = periods
-    for n in range(len(shifts)):
-        (i, j, shift, score) = shifts[n]
+    for (n, (i, j, shift, score)) in enumerate(shifts):
+        # (i, j, shift, score) = shifts[n]
         if type(periods) is list and len(periods) > 1:
             period = periods[i]
         expected_wrapped_shift = (
