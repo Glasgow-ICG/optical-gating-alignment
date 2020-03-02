@@ -99,21 +99,20 @@ def get_roll_factor(alignment1, alignment2, phase1):
             logger.debug(phase1, alignment1)
             return None
 
-        # use new if as 'else' redundant due to above return
-        if lower_bound < 0 and upper_bound < 0 and allow:
-            # started searching but didn't set bounds
-            # assume bounds are around the wrap point
-            logger.info("Wrapping around alignment sequence 1")
-            lower_bound = idx1
-            upper_bound = idx1 + 1
-            while alignment1[upper_bound % length1] < 0:
-                upper_bound = upper_bound + 1
-            logger.debug(
-                "Preliminary bounds applied: {0}, {1} for {2}",
-                lower_bound,
-                upper_bound,
-                phase1,
-            )
+        # assume lower_bound < 0 and upper_bound < 0 and allow
+        # started searching but didn't set bounds
+        # assume bounds are around the wrap point
+        logger.info("Wrapping around alignment sequence 1")
+        lower_bound = idx1
+        upper_bound = idx1 + 1
+        while alignment1[upper_bound % length1] < 0:
+            upper_bound = upper_bound + 1
+        logger.debug(
+            "Preliminary bounds applied: {0}, {1} for {2}",
+            lower_bound,
+            upper_bound,
+            phase1,
+        )
 
         # DEVNOTE: currently the lower and upper bounds don't deal with any gaps, i.e. -1s
         # account for gaps in lower bound
