@@ -1,0 +1,5 @@
+{
+    "python.pythonPath": "/home/chas/.cache/pypoetry/virtualenvs/optical-gating-alignment-gIjFc_Sc-py3.8/bin/python",
+    "python.linting.enabled": false,
+    "python.formatting.provider": "black"
+}
