@@ -262,7 +262,7 @@ def process_sequence(
     logger.debug(global_solution)
 
     # TODO what to do with this?
-    residuals = np.zeros([len(global_solution),])
+    residuals = np.zeros([len(global_solution), ])
     # for i in range(len(global_solution)-1):
     #     for shift in shift_history:
     #         if shift[1] == shift_history[-1][1] and shift[0] == i:
@@ -300,85 +300,85 @@ def process_sequence(
     )
 
 
-if __name__ == "__main__":
-    logger.enable("optical-gating-alignment")
-    logger.warning("This test is still broken.")
-    numStacks = 10
-    stackLength = 10
-    width = 10
-    height = 10
+# if __name__ == "__main__":
+#     logger.enable("optical-gating-alignment")
+#     logger.warning("This test is still broken.")
+#     numStacks = 10
+#     stackLength = 10
+#     width = 10
+#     height = 10
 
-    sequence_historyDrift = []
-    periodHistoryDrift = []
-    shiftsDrift = []
-    driftHistoryDrift = []
+#     sequence_historyDrift = []
+#     periodHistoryDrift = []
+#     shiftsDrift = []
+#     driftHistoryDrift = []
 
-    sequence_history = []
-    periodHistory = []
-    shifts = []
-    driftHistory = []
+#     sequence_history = []
+#     periodHistory = []
+#     shifts = []
+#     driftHistory = []
 
-    for i in range(numStacks):
-        logger.info("Running for stack {0}", i)
-        # Make new toy sequence
-        thisPeriod = stackLength - 0.5
-        seq1 = (
-            np.arange(stackLength) + np.random.randint(0, stackLength + 1)
-        ) % thisPeriod
-        logger.info("New Sequence: {0}; Period: {1} ({2})", seq1, thisPeriod, len(seq1))
-        seq2 = np.asarray(seq1, "uint8").reshape([len(seq1), 1, 1])
-        seq2 = np.repeat(np.repeat(seq2, width, 1), height, 2)
+#     for i in range(numStacks):
+#         logger.info("Running for stack {0}", i)
+#         # Make new toy sequence
+#         thisPeriod = stackLength - 0.5
+#         seq1 = (
+#             np.arange(stackLength) + np.random.randint(0, stackLength + 1)
+#         ) % thisPeriod
+#         logger.info("New Sequence: {0}; Period: {1} ({2})", seq1, thisPeriod, len(seq1))
+#         seq2 = np.asarray(seq1, "uint8").reshape([len(seq1), 1, 1])
+#         seq2 = np.repeat(np.repeat(seq2, width, 1), height, 2)
 
-        # Run MCC without Drift
-        (
-            sequence_history,
-            periodHistory,
-            driftHistory,
-            shifts,
-            roll_factor,
-            residuals,
-            score,
-            indels,
-        ) = process_sequence(
-            seq2,
-            thisPeriod,
-            None,
-            sequence_history,
-            periodHistory,
-            driftHistory,
-            shifts,
-            gap_penalty=0,
-            ref_seq_phase=0,
-            resampled_period=80,
-            max_offset=3,
-        )
+#         # Run MCC without Drift
+#         (
+#             sequence_history,
+#             periodHistory,
+#             driftHistory,
+#             shifts,
+#             roll_factor,
+#             residuals,
+#             score,
+#             indels,
+#         ) = process_sequence(
+#             seq2,
+#             thisPeriod,
+#             None,
+#             sequence_history,
+#             periodHistory,
+#             driftHistory,
+#             shifts,
+#             gap_penalty=0,
+#             ref_seq_phase=0,
+#             resampled_period=80,
+#             max_offset=3,
+#         )
 
-        # Outputs for toy examples
-        seqOut = (seq1 + roll_factor) % thisPeriod
-        logger.info("Aligned Sequence (wout Drift): {0}", seqOut)
+#         # Outputs for toy examples
+#         seqOut = (seq1 + roll_factor) % thisPeriod
+#         logger.info("Aligned Sequence (wout Drift): {0}", seqOut)
 
-        # Run MCC with Drift of [0,0]
-        (
-            sequence_historyDrift,
-            periodHistoryDrift,
-            driftHistoryDrift,
-            shiftsDrift,
-            roll_factor,
-            residuals,
-        ) = process_sequence(
-            seq2,
-            thisPeriod,
-            [0, 0],
-            sequence_historyDrift,
-            periodHistoryDrift,
-            driftHistoryDrift,
-            shiftsDrift,
-            gap_penalty=0,
-            ref_seq_phase=0,
-            resampled_period=80,
-            max_offset=3,
-        )
+#         # Run MCC with Drift of [0,0]
+#         (
+#             sequence_historyDrift,
+#             periodHistoryDrift,
+#             driftHistoryDrift,
+#             shiftsDrift,
+#             roll_factor,
+#             residuals,
+#         ) = process_sequence(
+#             seq2,
+#             thisPeriod,
+#             [0, 0],
+#             sequence_historyDrift,
+#             periodHistoryDrift,
+#             driftHistoryDrift,
+#             shiftsDrift,
+#             gap_penalty=0,
+#             ref_seq_phase=0,
+#             resampled_period=80,
+#             max_offset=3,
+#         )
 
-        # Outputs for toy examples
-        seqOut = (seq1 + roll_factor) % thisPeriod
-        logger.info("Aligned Sequence (with Drift): {0}", seqOut)
+#         # Outputs for toy examples
+#         seqOut = (seq1 + roll_factor) % thisPeriod
+#         logger.info("Aligned Sequence (with Drift): {0}", seqOut)

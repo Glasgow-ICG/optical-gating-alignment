@@ -631,18 +631,19 @@ def cascading_needleman_wunsch(
     # roll Alignment A, taking care of indels
     alignmentA = []
     indels = []
-    for i in np.arange(alignmentAWrapped.shape[0]):
-        if alignmentAWrapped[i] > -1:
-            alignmentA.append((alignmentAWrapped[i] - roll_factor) % (period))
+    for position in np.arange(alignmentAWrapped.shape[0]):
+        if alignmentAWrapped[position] > -1:
+            alignmentA.append(
+                (alignmentAWrapped[position] - roll_factor) % (period))
         else:
-            idx = i - 1
+            idx = position - 1
             before = -1
             while before < 0 and idx < alignmentAWrapped.shape[0] - 1:
                 before = alignmentAWrapped[(idx) % len(alignmentAWrapped)]
                 idx = idx + 1
             indels.append(before)
-    for i in indels:
-        alignmentA.insert(alignmentA.index(i) + 1, -1)
+    for indel in indels:
+        alignmentA.insert(alignmentA.index(indel) + 1, -1)
     alignmentA = np.array(alignmentA)
 
     # get roll_factor properly
@@ -656,68 +657,68 @@ def cascading_needleman_wunsch(
     return alignmentA, alignmentB, roll_factor, score
 
 
-if __name__ == "__main__":
-    roll = 7
-    gap_penalty = 1
-    shape = (1024, 1024)
+# if __name__ == "__main__":
+    # roll = 7
+    # gap_penalty = 1
+    # shape = (1024, 1024)
 
-    # Toy Example
-    # toySequenceA and B have very slightly different rhythms but the same period
-    toySequenceA = np.asarray(
-        [100, 150, 175, 200, 225, 230, 205, 180, 155, 120], dtype="uint8"
-    )
-    toySequenceA = np.roll(toySequenceA, -roll)
-    periodA = toySequenceA.shape[0]
-    toySequenceB = np.asarray(
-        [100, 125, 150, 175, 200, 225, 230, 205, 180, 120], dtype="uint8"
-    )
-    periodB = toySequenceB.shape[0]  # -0.5
-    logger.info("Running toy example with:")
-    logger.info("\tSequence A: ", toySequenceA)
-    logger.info("\tSequence B: ", toySequenceB)
+    # # Toy Example
+    # # toySequenceA and B have very slightly different rhythms but the same period
+    # toySequenceA = np.asarray(
+    #     [100, 150, 175, 200, 225, 230, 205, 180, 155, 120], dtype="uint8"
+    # )
+    # toySequenceA = np.roll(toySequenceA, -roll)
+    # periodA = toySequenceA.shape[0]
+    # toySequenceB = np.asarray(
+    #     [100, 125, 150, 175, 200, 225, 230, 205, 180, 120], dtype="uint8"
+    # )
+    # periodB = toySequenceB.shape[0]  # -0.5
+    # logger.info("Running toy example with:")
+    # logger.info("\tSequence A: ", toySequenceA)
+    # logger.info("\tSequence B: ", toySequenceB)
 
-    # Make sequences 3D arrays (as expected for this algorithm)
-    ndSequenceA = toySequenceA[:, np.newaxis, np.newaxis]
-    ndSequenceB = toySequenceB[:, np.newaxis, np.newaxis]
-    ndSequenceA = np.repeat(
-        np.repeat(ndSequenceA, shape[0], 1), shape[1], 2
-    )  # make each frame actually 2D to check everything works for image frames
-    ndSequenceB = np.repeat(np.repeat(ndSequenceB, shape[0], 1), shape[1], 2)
+    # # Make sequences 3D arrays (as expected for this algorithm)
+    # ndSequenceA = toySequenceA[:, np.newaxis, np.newaxis]
+    # ndSequenceB = toySequenceB[:, np.newaxis, np.newaxis]
+    # ndSequenceA = np.repeat(
+    #     np.repeat(ndSequenceA, shape[0], 1), shape[1], 2
+    # )  # make each frame actually 2D to check everything works for image frames
+    # ndSequenceB = np.repeat(np.repeat(ndSequenceB, shape[0], 1), shape[1], 2)
 
-    alignmentA, alignmentB, roll_factor, score = cascading_needleman_wunsch(
-        ndSequenceA, ndSequenceB, periodA, periodB, gap_penalty=gap_penalty
-    )
-    logger.info("Roll factor: {0} (score: {1})", roll_factor, score)
-    logger.info("Alignment Maps:")
-    logger.info("\tMap A: {0}", alignmentA)
-    logger.info("\tMap B: {0}", alignmentB)
+    # alignmentA, alignmentB, roll_factor, score = cascading_needleman_wunsch(
+    #     ndSequenceA, ndSequenceB, periodA, periodB, gap_penalty=gap_penalty
+    # )
+    # logger.info("Roll factor: {0} (score: {1})", roll_factor, score)
+    # logger.info("Alignment Maps:")
+    # logger.info("\tMap A: {0}", alignmentA)
+    # logger.info("\tMap B: {0}", alignmentB)
 
-    # Outputs for toy examples
-    alignedSequenceA = []  # Create new lists to fill with aligned values
-    alignedSequenceB = []
-    for i in alignmentA:  # fill new sequence A
-        if i < 0:  # indel
-            alignedSequenceA.append(-1)
-        else:
-            alignedSequenceA.append(linear_interpolation(ndSequenceA, i)[0, 0])
-    for i in alignmentB:  # fill new sequence B
-        if i < 0:  # indel
-            alignedSequenceB.append(-1)
-        else:
-            alignedSequenceB.append(linear_interpolation(ndSequenceB, i)[0, 0])
+    # # Outputs for toy examples
+    # alignedSequenceA = []  # Create new lists to fill with aligned values
+    # alignedSequenceB = []
+    # for i in alignmentA:  # fill new sequence A
+    #     if i < 0:  # indel
+    #         alignedSequenceA.append(-1)
+    #     else:
+    #         alignedSequenceA.append(linear_interpolation(ndSequenceA, i)[0, 0])
+    # for i in alignmentB:  # fill new sequence B
+    #     if i < 0:  # indel
+    #         alignedSequenceB.append(-1)
+    #     else:
+    #         alignedSequenceB.append(linear_interpolation(ndSequenceB, i)[0, 0])
 
-    # Print
-    score = 0
-    for i, j in zip(alignedSequenceA, alignedSequenceB):
-        if i > -1 and j > -1:
-            i = float(i)
-            j = float(j)
-            score = score - np.abs(i - j)
-        elif i > -1:
-            score = score - i
-        elif j > -1:
-            score = score - j
-    logger.info("Aligned Sequences:")
-    logger.info("\tMap A: {0}", alignmentA)
-    logger.info("\tMap B: {0}", alignmentB)
-    logger.info("Final Score: {0}", score)
+    # # Print
+    # score = 0
+    # for i, j in zip(alignedSequenceA, alignedSequenceB):
+    #     if i > -1 and j > -1:
+    #         i = float(i)
+    #         j = float(j)
+    #         score = score - np.abs(i - j)
+    #     elif i > -1:
+    #         score = score - i
+    #     elif j > -1:
+    #         score = score - j
+    # logger.info("Aligned Sequences:")
+    # logger.info("\tMap A: {0}", alignmentA)
+    # logger.info("\tMap B: {0}", alignmentB)
+    # logger.info("Final Score: {0}", score)
