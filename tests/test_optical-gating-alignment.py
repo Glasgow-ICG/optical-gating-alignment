@@ -178,7 +178,7 @@ def test_rolling_cross_correlation_uint8():
     period1 = len(string1)
     period2 = len(string2)
 
-    (alignment1, alignment2, roll_factor, score) = cc.rolling_cross_correlation(
+    (_, _, roll_factor, _) = cc.rolling_cross_correlation(
         sequence1, sequence2, period1, period2
     )
 
@@ -203,7 +203,7 @@ def test_rolling_cross_correlation_uint16():
     period1 = len(string1)
     period2 = len(string2)
 
-    (alignment1, alignment2, roll_factor, score) = cc.rolling_cross_correlation(
+    (_, _, roll_factor, _) = cc.rolling_cross_correlation(
         sequence1, sequence2, period1, period2
     )
 
