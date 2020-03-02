@@ -19,13 +19,3 @@ This repository contains the algorithms that allow long-term phase-lock to be ma
 
 1. The data repository for [1] has a copy of the cross-correlation method codes contained in doi:[10.1038/s41467-019-13112-6](http://dx.doi.org/10.1038/s41467-019-13112-6).
 2. Our Raspberry Pi-based open optical gating solution uses this repository as a submodule here:[GlasgowICG/open-optical-gating](https://github.com/Glasgow-ICG/open-optical-gating).
-
-## TODO
-
-- [ ] Create License
-- [ ] Update PipFile
-- [ ] Create __main__ tests
-- [ ] add JT's sgs somehow
-- [ ] Fix rcond future warning in sgs
-- [ ] Add example data
-- [ ] Add example notebook
