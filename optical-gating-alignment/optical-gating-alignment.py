@@ -234,7 +234,7 @@ def process_sequence(
                     )
             # TODO why are these different? I think cc is correct
             if algorithm == "cc":
-                shifts.append(
+                shift_history.append(
                     (
                         i,
                         len(sequence_history) - 1,
