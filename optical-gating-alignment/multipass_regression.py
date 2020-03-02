@@ -42,10 +42,10 @@ def solve_with_maximum_range(
     shifts, number_of_sequences, maximum_range, ref_seq_id, ref_seq_phase
 ):
     shifts_to_use = []
-    for (n, (i, j, _, _)) in enumerate(shifts):
+    for shift in shifts:
         # (i, j, shift, score) = shifts[n]
-        if j <= i + maximum_range:
-            shifts_to_use.append(shifts[n])
+        if shift[1] <= shift[0] + maximum_range:
+            shifts_to_use.append(shift)
     logger.info(
         "Solving using {0} of {1} constraints (max range {2})",
         len(shifts_to_use),
@@ -64,7 +64,7 @@ def adjust_shifts_to_match_solution(shifts, partial_solution, periods, warn_to=6
     # This is Python2 syntac and not needed in Python3
     if isinstance(periods, int) or len(periods) == 1:
         period = periods
-    for (n, (i, j, shift, score)) in enumerate(shifts):
+    for (i, j, shift, score) in shifts:
         # (i, j, shift, score) = shifts[n]
         if type(periods) is list and len(periods) > 1:
             period = periods[i]
