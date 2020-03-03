@@ -13,6 +13,8 @@ logger.disable("optical-gating-alignment")
 def get_roll_factor(alignment1, alignment2, phase1):
     """Get the precise roll factor for a known phase (phase1) in one sequence based on two alignments (alignment1 and alignment2). This allows the system to deal with arrhythmic sequences and the consequent indels."""
 
+    length1 = len(alignment1)
+
     # First get the exact index of phase1 in alignment1
     # Case 1: where phase1 is in alignment1
     # i.e. phase1 likely to be a whole number
@@ -29,9 +31,8 @@ def get_roll_factor(alignment1, alignment2, phase1):
         upper_bound = -1
         # DEVNOTE: the allow flag deals with the scenario that my alignment starts after the desired phase, i.e. alignment[0]>phase1, and wraps latter in the sequence
         allow = False  # only turn on if I've seen a value smaller than desired
-        length1 = len(alignment1)
         for idx1 in range(length1):
-            logger.debug(idx1, alignment1[idx1])
+            logger.debug("{0} {1}", idx1, alignment1[idx1])
             logger.debug(
                 alignment1[idx1] >= 0,
                 allow,
@@ -156,20 +157,22 @@ def get_roll_factor(alignment1, alignment2, phase1):
         logger.debug(alignment2[int(idxPos)])
 
     else:
+        print(idxPos)
         length2 = len(alignment2)
-        alignment2_lower_bound = np.floor(idxPos)
-        alignment2_upper_bound = np.ceil(idxPos)
-        logger.debug(alignment2_lower_bound, alignment2_upper_bound)
-        logger.debug(length1, length2)
+        alignment2_lower_bound = int(idxPos)  # same as np.floor
+        alignment2_upper_bound = int(idxPos + 1)  # same as np.ceil
+        logger.debug("{0} {1}", alignment2_lower_bound, alignment2_upper_bound)
+        logger.debug("{0} {1}", length1, length2)
 
         # check not same value (occurs when exactly hits an index)
         if alignment2_lower_bound == alignment2_upper_bound:
             alignment2_upper_bound = alignment2_upper_bound + 1
 
         # deal with gaps in alignment2
-        while alignment2[alignment2_lower_bound % length2] < 0:
+        print(alignment2_lower_bound, alignment2_upper_bound, length2)
+        while alignment2[int(alignment2_lower_bound % length2)] < 0:
             alignment2_lower_bound = alignment2_lower_bound - 1
-        while alignment2[alignment2_upper_bound % length2] < 0:
+        while alignment2[int(alignment2_upper_bound % length2)] < 0:
             alignment2_upper_bound = alignment2_upper_bound + 1
 
         # interpolate for exact position
