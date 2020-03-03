@@ -486,244 +486,92 @@ def test_minimum_score_flipped():
     assert minimum_position == 1.0 - 0.3125 and minimum_value == -0.65
 
 
-def test_rolling_cross_correlation_uint8_equal_start():
+def test_rolling_cross_correlation_uint8_equal():
     # create a rectangular uint8 'image' sequence with known values
     sequence1 = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint8")
     # use integer period
     period1 = len(sequence1)
-    # shifted string (by zero)
-    roll = 0 % period1
-    sequence2 = np.roll(sequence1, roll, axis=0)
     period2 = period1
 
-    (_, _, roll_factor, _) = cc.rolling_cross_correlation(
-        sequence1, sequence2, period1, period2
-    )
+    accurate = []
+    for roll in np.arange(period1):
+        sequence2 = np.roll(sequence1, roll, axis=0)
 
-    roll_factor = roll_factor % period2
+        (_, _, roll_factor, _) = cc.rolling_cross_correlation(
+            sequence1, sequence2, period1, period2
+        )
+        roll_factor = roll_factor % period2
 
-    # small catch for floating point error
-    assert roll_factor == roll or np.abs(roll_factor - roll) < 1e-6
+        # small catch for floating point error
+        accurate.append(np.abs(roll_factor - roll) < 1e6)
+
+    assert np.all(accurate)
 
 
-def test_rolling_cross_correlation_uint8_equal_end():
+def test_rolling_cross_correlation_uint16_equal():
+    # create a rectangular uint16 'image' sequence with known values
+    sequence1 = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint16")
+    # use integer period
+    period1 = len(sequence1)
+    period2 = period1
+
+    accurate = []
+    for roll in np.arange(period1):
+        sequence2 = np.roll(sequence1, roll, axis=0)
+
+        (_, _, roll_factor, _) = cc.rolling_cross_correlation(
+            sequence1, sequence2, period1, period2
+        )
+        roll_factor = roll_factor % period2
+
+        # small catch for floating point error
+        accurate.append(np.abs(roll_factor - roll) < 1e6)
+
+    assert np.all(accurate)
+
+
+def test_rolling_cross_correlation_uint8_notequal():
     # create a rectangular uint8 'image' sequence with known values
     sequence1 = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint8")
     # use integer period
     period1 = len(sequence1)
-    # shifted string (by period)
-    roll = len(sequence1) % period1
-    sequence2 = np.roll(sequence1, roll, axis=0)
-    period2 = period1
 
-    (_, _, roll_factor, _) = cc.rolling_cross_correlation(
-        sequence1, sequence2, period1, period2
-    )
+    accurate = []
+    for roll in np.arange(period1):
+        sequence2 = np.roll(sequence1, roll, axis=0)
+        period2 = len(sequence2)
 
-    roll_factor = roll_factor % period2
+        (_, _, roll_factor, _) = cc.rolling_cross_correlation(
+            sequence1, sequence2, period1, period2
+        )
+        roll_factor = roll_factor % period2
 
-    # small catch for floating point error
-    assert roll_factor == roll or np.abs(roll_factor - roll) < 1e-6
+        # catch a roll of ~0.4469 (known result)
+        accurate.append(np.abs(roll_factor - roll) < 0.45)
 
-
-def test_rolling_cross_correlation_uint8_equal_rand():
-    # create a rectangular uint8 'image' sequence with known values
-    sequence1 = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint8")
-    # use integer period
-    period1 = len(sequence1)
-    # shifted string (never rolls by zero or period)
-    roll = np.random.randint(1, len(sequence1) - 1) % period1
-    sequence2 = np.roll(sequence1, roll, axis=0)
-    period2 = period1
-
-    (_, _, roll_factor, _) = cc.rolling_cross_correlation(
-        sequence1, sequence2, period1, period2
-    )
-
-    roll_factor = roll_factor % period2
-
-    # small catch for floating point errors and ambiguity
-    assert roll_factor == roll or np.abs(roll_factor - roll) < 1e-2
+    assert np.all(accurate)
 
 
-def test_rolling_cross_correlation_uint16_equal_start():
+def test_rolling_cross_correlation_uint16_notequal():
     # create a rectangular uint16 'image' sequence with known values
     sequence1 = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint16")
     # use integer period
     period1 = len(sequence1)
-    # shifted string (by zero)
-    roll = 0 % period1
-    sequence2 = np.roll(sequence1, roll, axis=0)
-    period2 = period1
 
-    (_, _, roll_factor, _) = cc.rolling_cross_correlation(
-        sequence1, sequence2, period1, period2
-    )
+    accurate = []
+    for roll in np.arange(period1):
+        sequence2 = np.roll(sequence1, roll, axis=0)
+        period2 = len(sequence2)
 
-    roll_factor = roll_factor % period2
+        (_, _, roll_factor, _) = cc.rolling_cross_correlation(
+            sequence1, sequence2, period1, period2
+        )
+        roll_factor = roll_factor % period2
 
-    # small catch for floating point error
-    assert roll_factor == roll or np.abs(roll_factor - roll) < 1e-6
+        # catch a roll of ~0.4469 (known result)
+        accurate.append(np.abs(roll_factor - roll) < 0.45)
 
-
-def test_rolling_cross_correlation_uint16_equal_end():
-    # create a rectangular uint16 'image' sequence with known values
-    sequence1 = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint16")
-    # use integer period
-    period1 = len(sequence1)
-    # shifted string (by period)
-    roll = len(sequence1) % period1
-    sequence2 = np.roll(sequence1, roll, axis=0)
-    period2 = period1
-
-    (_, _, roll_factor, _) = cc.rolling_cross_correlation(
-        sequence1, sequence2, period1, period2
-    )
-
-    roll_factor = roll_factor % period2
-
-    # small catch for floating point error
-    assert roll_factor == roll or np.abs(roll_factor - roll) < 1e-6
-
-
-def test_rolling_cross_correlation_uint16_equal_rand():
-    # create a rectangular uint16 'image' sequence with known values
-    sequence1 = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint16")
-    # use integer period
-    period1 = len(sequence1)
-    # shifted string (never rolls by zero or period)
-    roll = np.random.randint(1, len(sequence1) - 1) % period1
-    sequence2 = np.roll(sequence1, roll, axis=0)
-    period2 = period1
-
-    (_, _, roll_factor, _) = cc.rolling_cross_correlation(
-        sequence1, sequence2, period1, period2
-    )
-
-    roll_factor = roll_factor % period2
-
-    # small catch for floating point errors and ambiguity
-    assert roll_factor == roll or np.abs(roll_factor - roll) < 1e-2
-
-
-def test_rolling_cross_correlation_uint8_notequal_start():
-    # create a rectangular uint8 'image' sequence with known values
-    sequence1 = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint8")
-    # use integer period
-    period1 = len(sequence1)
-    # shifted string (by zero)
-    roll = 0 % period1
-    sequence2 = np.roll(sequence1[:-1], roll, axis=0)
-    period2 = len(sequence2)
-
-    (_, _, roll_factor, _) = cc.rolling_cross_correlation(
-        sequence1, sequence2, period1, period2
-    )
-
-    roll_factor = roll_factor % period2
-
-    # catch a roll of ~0.4469 (known result)
-    assert roll_factor - 0.4469 < 1e-3
-
-
-def test_rolling_cross_correlation_uint8_notequal_end():
-    # create a rectangular uint8 'image' sequence with known values
-    sequence1 = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint8")
-    # use integer period
-    period1 = len(sequence1)
-    # shifted string (by zero)
-    roll = len(sequence1) % period1
-    sequence2 = np.roll(sequence1[:-1], roll, axis=0)
-    period2 = len(sequence2)
-
-    (_, _, roll_factor, _) = cc.rolling_cross_correlation(
-        sequence1, sequence2, period1, period2
-    )
-
-    roll_factor = roll_factor % period2
-
-    # catch a roll of ~0.4469 (known result)
-    assert roll_factor - 0.4469 < 1e-3
-
-
-def test_rolling_cross_correlation_uint8_notequal_rand():
-    # create a rectangular uint8 'image' sequence with known values
-    sequence1 = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint8")
-    # use integer period
-    period1 = len(sequence1)
-    # shifted string (by zero)
-    roll = np.random.randint(1, len(sequence1) - 1) % period1
-    sequence2 = np.roll(sequence1[:-1], roll, axis=0)
-    period2 = len(sequence2)
-
-    (_, _, roll_factor, _) = cc.rolling_cross_correlation(
-        sequence1, sequence2, period1, period2
-    )
-
-    roll_factor = roll_factor % period2
-
-    # catch a roll of ~0.4469 (known result)
-    assert roll_factor - roll - 0.4469 < 1e-3
-
-
-def test_rolling_cross_correlation_uint16_notequal_start():
-    # create a rectangular uint16 'image' sequence with known values
-    sequence1 = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint16")
-    # use integer period
-    period1 = len(sequence1)
-    # shifted string (by zero)
-    roll = 0 % period1
-    sequence2 = np.roll(sequence1[:-1], roll, axis=0)
-    period2 = len(sequence2)
-
-    (_, _, roll_factor, _) = cc.rolling_cross_correlation(
-        sequence1, sequence2, period1, period2
-    )
-
-    roll_factor = roll_factor % period2
-
-    # catch a roll of ~0.4469 (known result)
-    assert roll_factor - 0.4469 < 1e-3
-
-
-def test_rolling_cross_correlation_uint16_notequal_end():
-    # create a rectangular uint16 'image' sequence with known values
-    sequence1 = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint16")
-    # use integer period
-    period1 = len(sequence1)
-    # shifted string (by zero)
-    roll = len(sequence1) % period1
-    sequence2 = np.roll(sequence1[:-1], roll, axis=0)
-    period2 = len(sequence2)
-
-    (_, _, roll_factor, _) = cc.rolling_cross_correlation(
-        sequence1, sequence2, period1, period2
-    )
-
-    roll_factor = roll_factor % period2
-
-    # catch a roll of ~0.4469 (known result)
-    assert roll_factor - 0.4469 < 1e-3
-
-
-def test_rolling_cross_correlation_uint16_notequal_rand():
-    # create a rectangular uint16 'image' sequence with known values
-    sequence1 = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint16")
-    # use integer period
-    period1 = len(sequence1)
-    # shifted string (by zero)
-    roll = np.random.randint(1, len(sequence1) - 1) % period1
-    sequence2 = np.roll(sequence1[:-1], roll, axis=0)
-    period2 = len(sequence2)
-
-    (_, _, roll_factor, _) = cc.rolling_cross_correlation(
-        sequence1, sequence2, period1, period2
-    )
-
-    roll_factor = roll_factor % period2
-
-    # catch a roll of ~0.4469 (known result)
-    assert roll_factor - roll - 0.4469 < 1e-3
+    assert np.all(accurate)
 
 
 # FIXME roll factor seems to be out by phase1 - will do after I work out WTF I wrote
