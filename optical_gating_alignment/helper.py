@@ -42,20 +42,41 @@ def linear_interpolation(sequence, float_position, period=None):
     return interpolated_value_int
 
 
-def resample_sequence(sequence, current_period, new_period):
-    """Resample a sequence from it's original length (current_period; float)
-    to a new length (new_period; int)"""
+def interpolate_image_sequence(sequence, period, interpolation_factor=1):
+    """Interpolate a series of images along a 'time' axis.
+    Note: this is, currently, only for uint8 images
 
-    result = np.zeros(
-        [new_period, sequence.shape[1], sequence.shape[2]], sequence.dtype
-    )
-    for i in range(new_period):
-        resampled_position = (i / float(new_period)) * current_period
-        result[i] = linear_interpolation(
-            sequence, resampled_position, period=current_period
-        )
+    Inputs:
+    * series: a PxMxN numpy array contain P images of size MxN
+      * P is a time-like axis, e.g. time or phase.
+    * period: float period length in units of frames
+    * interpolation_factor: integer interpolation factor, e.g. 2 doubles the series length
 
-    return result
+    Outputs:
+    * interpolated_sequence: a P'xMxN numpy array
+      * Contains np.ceil(interpolation_factor*period) frames, i.e. P' < =interpolation_factor*P
+    """
+
+    # Original coordinates
+    (_, m, n) = sequence.shape
+
+    # Interpolated space coordinates
+    p_indices_out = np.arange(0, period, 1 / interpolation_factor)  # supersample
+    p_out = len(p_indices_out)
+
+    # Sample at interpolated coordinates
+    # DEVNOTE: The boundary condition is dealt with simplistically
+    # ... but it works.
+    interpolated_sequence = np.zeros((p_out, m, n), dtype=sequence.dtype)
+    for i in np.arange(p_indices_out.shape[0]):
+        if p_indices_out[i] + 1 > len(sequence):  # boundary condition
+            interpolated_sequence[i, ...] = sequence[-1]
+        else:
+            interpolated_sequence[i, ...] = linear_interpolation(
+                sequence, p_indices_out[i]
+            )
+
+    return interpolated_sequence
 
 
 def drift_correction(sequence1, sequence2, drift):

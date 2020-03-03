@@ -63,9 +63,13 @@ def rolling_cross_correlation(
     length2 = len(sequence2)
 
     if period1 != resampled_period:
-        sequence1 = hlp.resample_sequence(sequence1, period1, resampled_period)
+        sequence1 = hlp.interpolate_image_sequence(
+            sequence1, period1, resampled_period / period1
+        )
     if period2 != resampled_period:
-        sequence2 = hlp.resample_sequence(sequence2, period2, resampled_period)
+        sequence2 = hlp.interpolate_image_sequence(
+            sequence2, period2, resampled_period / period2
+        )
 
     logger.debug("Resliced sequence #1:\t{0}", sequence1[:, 0, 0])
     logger.debug("Resliced sequence #2:\t{0}", sequence2[:, 0, 0])

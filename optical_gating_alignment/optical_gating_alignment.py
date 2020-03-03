@@ -114,10 +114,10 @@ def process_sequence(
             )
 
     # Add latest reference frames to our sequence set
-    this_resampled_sequence = hlp.resample_sequence(
-        this_sequence, this_period, resampled_period
+    this_resampled_sequence = hlp.interpolate_image_sequence(
+        this_sequence, this_period, resampled_period / this_period
     )
-    this_resampled_sequence = this_resampled_sequence.astype("uint8")
+    this_resampled_sequence = this_resampled_sequence.astype("uint8")  # FIXME: needed?
     sequence_history.append(this_resampled_sequence)
     period_history.append(resampled_period)
 

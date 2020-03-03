@@ -91,7 +91,7 @@ def test_linear_interpolation_uint8():
     assert np.all(accurate)
 
 
-def test_resample_sequence_uint8_period():
+def test_interpolate_image_sequence_uint8_period():
     # create a rectangular uint8 'image' sequence
     period_int = np.random.randint(5, 11)
     sequence = toy_sequence(
@@ -102,18 +102,19 @@ def test_resample_sequence_uint8_period():
 
     accurate = []
     for resample_factor in np.arange(5):
-        # determine resampling
-        new_period = int(period_int * resample_factor)
-
         # resample
-        resampled_sequence = hlp.resample_sequence(sequence, current_period, new_period)
+        resampled_sequence = hlp.interpolate_image_sequence(
+            sequence, current_period, resample_factor
+        )
 
-        accurate.append(len(resampled_sequence) == new_period)
+        accurate.append(
+            len(resampled_sequence) == int(current_period * resample_factor) + 1
+        )
 
     assert np.all(accurate)
 
 
-def test_resample_sequence_uint8_2():
+def test_interpolate_image_sequence_uint8_2():
     # create a rectangular uint8 'image' sequence
     period_int = np.random.randint(5, 11)
     sequence = toy_sequence(
@@ -122,14 +123,12 @@ def test_resample_sequence_uint8_2():
     # use integer period
 
     # resample with factor of 1
-    resampled_sequence = hlp.resample_sequence(
-        sequence, len(sequence), 2 * len(sequence)
-    )
+    resampled_sequence = hlp.interpolate_image_sequence(sequence, len(sequence), 2.0)
 
     assert np.all(resampled_sequence[::2, ...] == sequence)
 
 
-def test_resample_sequence_uint8_1():
+def test_interpolate_image_sequence_uint8_1():
     # create a rectangular uint8 'image' sequence
     period_int = np.random.randint(5, 11)
     sequence = toy_sequence(
@@ -138,12 +137,12 @@ def test_resample_sequence_uint8_1():
     # use integer period
 
     # resample with factor of 1
-    resampled_sequence = hlp.resample_sequence(sequence, len(sequence), len(sequence))
+    resampled_sequence = hlp.interpolate_image_sequence(sequence, len(sequence), 1.0)
 
     assert np.all(resampled_sequence == sequence)
 
 
-def test_resample_sequence_uint16_period():
+def test_interpolate_image_sequence_uint16_period():
     # create a rectangular uint16 'image' sequence
     period_int = np.random.randint(5, 11)
     sequence = toy_sequence(
@@ -154,18 +153,19 @@ def test_resample_sequence_uint16_period():
 
     accurate = []
     for resample_factor in np.arange(5):
-        # determine resampling
-        new_period = int(period_int * resample_factor)
-
         # resample
-        resampled_sequence = hlp.resample_sequence(sequence, current_period, new_period)
+        resampled_sequence = hlp.interpolate_image_sequence(
+            sequence, current_period, resample_factor
+        )
 
-        accurate.append(len(resampled_sequence) == new_period)
+        accurate.append(
+            len(resampled_sequence) == int(resample_factor * current_period) + 1
+        )
 
     assert np.all(accurate)
 
 
-def test_resample_sequence_uint16_2():
+def test_interpolate_image_sequence_uint16_2():
     # create a rectangular uint16 'image' sequence
     period_int = np.random.randint(5, 11)
     sequence = toy_sequence(
@@ -174,14 +174,12 @@ def test_resample_sequence_uint16_2():
     # use integer period
 
     # resample with factor of 1
-    resampled_sequence = hlp.resample_sequence(
-        sequence, len(sequence), 2 * len(sequence)
-    )
+    resampled_sequence = hlp.interpolate_image_sequence(sequence, len(sequence), 2.0)
 
     assert np.all(resampled_sequence[::2, ...] == sequence)
 
 
-def test_resample_sequence_uint16_1():
+def test_interpolate_image_sequence_uint16_1():
     # create a rectangular uint16 'image' sequence
     period_int = np.random.randint(5, 11)
     sequence = toy_sequence(
@@ -190,19 +188,19 @@ def test_resample_sequence_uint16_1():
     # use integer period
 
     # resample with factor of 1
-    resampled_sequence = hlp.resample_sequence(sequence, len(sequence), len(sequence))
+    resampled_sequence = hlp.interpolate_image_sequence(sequence, len(sequence), 1.0)
 
     assert np.all(resampled_sequence == sequence)
 
 
-def test_resample_sequence_uint8_known():
+def test_interpolate_image_sequence_uint8_known():
     # create a rectangular uint8 'image' sequence with known values
     sequence = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint8")
     # use integer period
     period = 8
 
     # resample to 80
-    resampled_sequence = hlp.resample_sequence(sequence, period, 80)
+    resampled_sequence = hlp.interpolate_image_sequence(sequence, period, 80 / period)
 
     # this was very manual
     expected = [
@@ -294,14 +292,14 @@ def test_resample_sequence_uint8_known():
     )
 
 
-def test_resample_sequence_uint16_known():
+def test_interpolate_image_sequence_uint16_known():
     # create a rectangular uint16 'image' sequence with known values
     sequence = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint16")
     # use integer period
     period = 8
 
     # resample to 80
-    resampled_sequence = hlp.resample_sequence(sequence, period, 80)
+    resampled_sequence = hlp.interpolate_image_sequence(sequence, period, 80 / period)
 
     # this was very manual
     expected = [

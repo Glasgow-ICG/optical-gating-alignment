@@ -222,43 +222,6 @@ def get_roll_factor_at(alignment1, alignment2, phase1):
     return phase2
 
 
-def interpolate_image_sequence(sequence, period, interpolation_factor=1):
-    """Interpolate a series of images along a 'time' axis.
-    Note: this is, currently, only for uint8 images
-
-    Inputs:
-    * series: a PxMxN numpy array contain P images of size MxN
-      * P is a time-like axis, e.g. time or phase.
-    * period: float period length in units of frames
-    * interpolation_factor: integer interpolation factor, e.g. 2 doubles the series length
-
-    Outputs:
-    * interpolated_sequence: a P'xMxN numpy array
-      * Contains np.ceil(interpolation_factor*period) frames, i.e. P' < =interpolation_factor*P
-    """
-
-    # Original coordinates
-    (_, m, n) = sequence.shape
-
-    # Interpolated space coordinates
-    p_indices_out = np.arange(0, period, 1 / interpolation_factor)  # supersample
-    p_out = len(p_indices_out)
-
-    # Sample at interpolated coordinates
-    # DEVNOTE: The boundary condition is dealt with simplistically
-    # ... but it works.
-    interpolated_sequence = np.zeros((p_out, m, n), dtype=np.uint8)
-    for i in np.arange(p_indices_out.shape[0]):
-        if p_indices_out[i] + 1 > len(sequence):  # boundary condition
-            interpolated_sequence[i, ...] = sequence[-1]
-        else:
-            interpolated_sequence[i, ...] = hlp.linear_interpolation(
-                sequence, p_indices_out[i]
-            )
-
-    return interpolated_sequence
-
-
 def fill_traceback_matrix(score_matrix, gap_penalty=0):
     """Using a score matrix, fill out a traceback matrix.
     This can then be traversed to identify a valid alignment.
@@ -508,10 +471,10 @@ def cascading_needleman_wunsch(
             "Interpolating by a factor of {0} for greater precision...",
             interpolation_factor,
         )
-        sequence = interpolate_image_sequence(
+        sequence = hlp.interpolate_image_sequence(
             sequence, period, interpolation_factor=interpolation_factor
         )
-        template_sequence = interpolate_image_sequence(
+        template_sequence = hlp.interpolate_image_sequence(
             template_sequence, period, interpolation_factor=interpolation_factor
         )
         logger.info(
