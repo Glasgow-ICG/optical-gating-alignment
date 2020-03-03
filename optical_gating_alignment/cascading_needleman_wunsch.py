@@ -10,8 +10,11 @@ import j_py_sad_correlation as jps
 logger.disable("optical-gating-alignment")
 
 
-def get_roll_factor(alignment1, alignment2, phase1):
+def get_roll_factor_at(alignment1, alignment2, phase1):
     """Get the precise roll factor for a known phase (phase1) in one sequence based on two alignments (alignment1 and alignment2). This allows the system to deal with arrhythmic sequences and the consequent indels."""
+
+    if isinstance(alignment1, list):
+        alignment1 = np.array(alignment1)
 
     length1 = len(alignment1)
 
@@ -20,7 +23,7 @@ def get_roll_factor(alignment1, alignment2, phase1):
     # i.e. phase1 likely to be a whole number
     if phase1 in alignment1:
         # DEVNOTE: we assume there is only ever one, which should be true or something has gone awry
-        idxPos = np.nonzero(alignment1 == phase1)[0]
+        idxPos = np.nonzero(alignment1 == phase1)[0][0]
         logger.info("Exact phase found at index {0} in alignment 1", idxPos)
     # Case 2: where phase1 is not in alignment1
     # find the indices in alignment1 that are the lower and upper bounds
@@ -34,6 +37,7 @@ def get_roll_factor(alignment1, alignment2, phase1):
         for idx1 in range(length1):
             logger.debug("{0} {1}", idx1, alignment1[idx1])
             logger.debug(
+                "{0} {1} {2} {3}",
                 alignment1[idx1] >= 0,
                 allow,
                 alignment1[idx1] == min(alignment1[alignment1 > 0]),
@@ -157,7 +161,6 @@ def get_roll_factor(alignment1, alignment2, phase1):
         logger.debug(alignment2[int(idxPos)])
 
     else:
-        print(idxPos)
         length2 = len(alignment2)
         alignment2_lower_bound = int(idxPos)  # same as np.floor
         alignment2_upper_bound = int(idxPos + 1)  # same as np.ceil
@@ -169,7 +172,6 @@ def get_roll_factor(alignment1, alignment2, phase1):
             alignment2_upper_bound = alignment2_upper_bound + 1
 
         # deal with gaps in alignment2
-        print(alignment2_lower_bound, alignment2_upper_bound, length2)
         while alignment2[int(alignment2_lower_bound % length2)] < 0:
             alignment2_lower_bound = alignment2_lower_bound - 1
         while alignment2[int(alignment2_upper_bound % length2)] < 0:
@@ -638,7 +640,7 @@ def cascading_needleman_wunsch(
     alignmentA = np.array(alignmentA)
 
     # get roll_factor properly
-    roll_factor = get_roll_factor(alignmentA, alignmentB, ref_seq_phase)
+    roll_factor = get_roll_factor_at(alignmentA, alignmentB, ref_seq_phase)
 
     logger.info("roll_factor:\t{0}", roll_factor)
     logger.info("Aligned sequence #1 (unwrapped):\t", alignmentA)
