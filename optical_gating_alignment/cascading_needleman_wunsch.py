@@ -2,6 +2,7 @@
 Uses a cascading form of the Needleman Wunsch algorithm.
 This module includes all necessary functions."""
 
+import optical_gating_alignment.helper as hlp
 import numpy as np
 from loguru import logger
 import j_py_sad_correlation as jps
@@ -221,39 +222,6 @@ def get_roll_factor_at(alignment1, alignment2, phase1):
     return phase2
 
 
-def linear_interpolation(sequence, float_position):
-    """A linear interpolation function for a 'sequence' of ND items
-    Note: this is, currently, only for uint8 images.
-    """
-    # Bottom position
-    # equivalent to np.floor(float_position).astype('int)
-    lower_index = int(float_position)
-
-    if float_position // 1 == float_position:
-        # equivalent to sequence[np.floor(float_position).astype('int)]
-        interpolated_value = (
-            1.0 * sequence[lower_index]
-        )  # 1.0* needed to force numba type
-    else:
-        # Interpolation Ratio
-        interpolated_index = float_position - (float_position // 1)
-
-        # Top position
-        upper_index = int(float_position + 1)
-
-        # Values
-        lower_value = sequence[lower_index]
-        upper_value = sequence[upper_index]
-
-        interpolated_value = lower_value + interpolated_index * (
-            upper_value - lower_value
-        )
-
-    interpolated_value_int = interpolated_value.astype(np.uint8)
-
-    return interpolated_value_int
-
-
 def interpolate_image_sequence(sequence, period, interpolation_factor=1):
     """Interpolate a series of images along a 'time' axis.
     Note: this is, currently, only for uint8 images
@@ -284,7 +252,7 @@ def interpolate_image_sequence(sequence, period, interpolation_factor=1):
         if p_indices_out[i] + 1 > len(sequence):  # boundary condition
             interpolated_sequence[i, ...] = sequence[-1]
         else:
-            interpolated_sequence[i, ...] = linear_interpolation(
+            interpolated_sequence[i, ...] = hlp.linear_interpolation(
                 sequence, p_indices_out[i]
             )
 
@@ -692,12 +660,12 @@ def cascading_needleman_wunsch(
 #     if i < 0:  # indel
 #         alignedSequenceA.append(-1)
 #     else:
-#         alignedSequenceA.append(linear_interpolation(ndSequenceA, i)[0, 0])
+#         alignedSequenceA.append(hlp.linear_interpolation(ndSequenceA, i)[0, 0])
 # for i in alignmentB:  # fill new sequence B
 #     if i < 0:  # indel
 #         alignedSequenceB.append(-1)
 #     else:
-#         alignedSequenceB.append(linear_interpolation(ndSequenceB, i)[0, 0])
+#         alignedSequenceB.append(hlp.linear_interpolation(ndSequenceB, i)[0, 0])
 
 # # Print
 # score = 0

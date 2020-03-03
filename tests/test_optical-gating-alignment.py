@@ -69,7 +69,29 @@ def test_drift_correction_uint16():
     assert np.all(corrected1[0] == corrected2[0])
 
 
-def test_resample_sequence_uint8_not1or2():
+def test_linear_interpolation_uint8():
+    # create a rectangular uint8 'image' sequence
+    sequence = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint8")
+
+    accurate = []
+    for interp_pos in np.arange(0.5, len(sequence) - 0.5, 1):
+        interpolated_value = hlp.linear_interpolation(
+            sequence, interp_pos, period=None
+        )[0, 0]
+        # astype('int') is needed to prevent wrapping
+        known_value = int(
+            (
+                sequence[int(interp_pos), 0, 0].astype("int")
+                + sequence[int(interp_pos + 1), 0, 0].astype("int")
+            )
+            / 2
+        )
+        accurate.append(interpolated_value == known_value)
+
+    assert np.all(accurate)
+
+
+def test_resample_sequence_uint8_period():
     # create a rectangular uint8 'image' sequence
     period_int = np.random.randint(5, 11)
     sequence = toy_sequence(
@@ -78,14 +100,17 @@ def test_resample_sequence_uint8_not1or2():
     # use non-integer period
     current_period = period_int - np.random.rand(1)
 
-    # determine resampling
-    resample_factor = np.random.randint(3, 5)
-    new_period = int(period_int * resample_factor)
+    accurate = []
+    for resample_factor in np.arange(5):
+        # determine resampling
+        new_period = int(period_int * resample_factor)
 
-    # resample with random factor
-    resampled_sequence = hlp.resample_sequence(sequence, current_period, new_period)
+        # resample
+        resampled_sequence = hlp.resample_sequence(sequence, current_period, new_period)
 
-    assert len(resampled_sequence) == new_period
+        accurate.append(len(resampled_sequence) == new_period)
+
+    assert np.all(accurate)
 
 
 def test_resample_sequence_uint8_2():
@@ -118,7 +143,7 @@ def test_resample_sequence_uint8_1():
     assert np.all(resampled_sequence == sequence)
 
 
-def test_resample_sequence_uint16_not1or2():
+def test_resample_sequence_uint16_period():
     # create a rectangular uint16 'image' sequence
     period_int = np.random.randint(5, 11)
     sequence = toy_sequence(
@@ -127,14 +152,17 @@ def test_resample_sequence_uint16_not1or2():
     # use non-integer period
     current_period = period_int - np.random.rand(1)
 
-    # determine resampling
-    resample_factor = np.random.randint(3, 5)
-    new_period = int(period_int * resample_factor)
+    accurate = []
+    for resample_factor in np.arange(5):
+        # determine resampling
+        new_period = int(period_int * resample_factor)
 
-    # resample with random factor
-    resampled_sequence = hlp.resample_sequence(sequence, current_period, new_period)
+        # resample
+        resampled_sequence = hlp.resample_sequence(sequence, current_period, new_period)
 
-    assert len(resampled_sequence) == new_period
+        accurate.append(len(resampled_sequence) == new_period)
+
+    assert np.all(accurate)
 
 
 def test_resample_sequence_uint16_2():

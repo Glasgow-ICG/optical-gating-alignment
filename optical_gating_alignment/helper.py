@@ -5,6 +5,43 @@ for drift by taking the common window of two sequences."""
 import numpy as np
 
 
+def linear_interpolation(sequence, float_position, period=None):
+    """A linear interpolation function for a 'sequence' of ND items
+    Note: this is, currently, only for uint8 images.
+    """
+    if period is None:
+        period = len(sequence)
+
+    # Bottom position
+    # equivalent to np.floor(float_position).astype('int)
+    lower_index = int(float_position)
+
+    if float_position // 1 == float_position:
+        # equivalent to sequence[np.floor(float_position).astype('int)]
+        interpolated_value = (
+            1.0 * sequence[lower_index]
+        )  # 1.0* needed to force numba type
+    else:
+
+        # Interpolation Ratio
+        interpolated_index = float_position - (float_position // 1)
+
+        # Top position
+        upper_index = lower_index + 1
+
+        remainder = (float_position - lower_index) / float(upper_index - lower_index)
+
+        # Values
+        lower_value = sequence[lower_index]
+        upper_value = sequence[int(upper_index % period)]
+
+        interpolated_value = lower_value * (1 - remainder) + upper_value * remainder
+
+    interpolated_value_int = interpolated_value.astype(sequence.dtype)
+
+    return interpolated_value_int
+
+
 def resample_sequence(sequence, current_period, new_period):
     """Resample a sequence from it's original length (current_period; float)
     to a new length (new_period; int)"""
@@ -13,16 +50,10 @@ def resample_sequence(sequence, current_period, new_period):
         [new_period, sequence.shape[1], sequence.shape[2]], sequence.dtype
     )
     for i in range(new_period):
-        resampled_positon = (i / float(new_period)) * current_period
-        lower_position = int(resampled_positon)
-        upper_positon = lower_position + 1
-        remainder = (resampled_positon - lower_position) / float(
-            upper_positon - lower_position
+        resampled_position = (i / float(new_period)) * current_period
+        result[i] = linear_interpolation(
+            sequence, resampled_position, period=current_period
         )
-
-        before = sequence[lower_position]
-        after = sequence[int(upper_positon % current_period)]
-        result[i] = before * (1 - remainder) + after * remainder
 
     return result
 
