@@ -13,11 +13,15 @@ logger.disable("optical-gating-alignment")
 
 def get_roll_factor_at(alignment1, alignment2, phase1):
     """Get the precise roll factor for a known phase (phase1) in one sequence based on two alignments (alignment1 and alignment2). This allows the system to deal with arrhythmic sequences and the consequent indels."""
+    logger.debug("{0} {1} {2}", alignment1, alignment2, phase1)
 
     if isinstance(alignment1, list):
         alignment1 = np.array(alignment1)
+    if isinstance(alignment2, list):
+        alignment2 = np.array(alignment2)
 
     length1 = len(alignment1)
+    length2 = len(alignment2)
 
     # First get the exact index of phase1 in alignment1
     # Case 1: where phase1 is in alignment1
@@ -25,23 +29,27 @@ def get_roll_factor_at(alignment1, alignment2, phase1):
     if phase1 in alignment1:
         # DEVNOTE: we assume there is only ever one, which should be true or something has gone awry
         idxPos = np.nonzero(alignment1 == phase1)[0][0]
-        logger.info("Exact phase found at index {0} in alignment 1", idxPos)
+        logger.info("Exact phase {0} found at index {1} in alignment 1", phase1, idxPos)
     # Case 2: where phase1 is not in alignment1
     # find the indices in alignment1 that are the lower and upper bounds
     # then use linear interpolation to get the exact index
     else:
+        logger.info(
+            "Exact phase {0} not found in alignment 1; searching for bounds.", phase1
+        )
         # set starting bounds to a non-index
         lower_bound = -1
         upper_bound = -1
         # DEVNOTE: the allow flag deals with the scenario that my alignment starts after the desired phase, i.e. alignment[0]>phase1, and wraps latter in the sequence
         allow = False  # only turn on if I've seen a value smaller than desired
         for idx1 in range(length1):
-            logger.debug("{0} {1}", idx1, alignment1[idx1])
             logger.debug(
-                "{0} {1} {2} {3}",
-                alignment1[idx1] >= 0,
+                "allow := {0};\tidx := {1};\talignment1[idx1] := {2};\t(alignment1[idx1]>=0) := {3};\t >= min(alignment1) := {4};\t > phase1 := {5}",
                 allow,
-                alignment1[idx1] == min(alignment1[alignment1 > 0]),
+                idx1,
+                alignment1[idx1],
+                alignment1[idx1] >= 0,
+                alignment1[idx1] == min(alignment1[alignment1 >= 0]),
                 alignment1[idx1] > phase1,
             )
             if alignment1[idx1] >= 0 and not allow and alignment1[idx1] < phase1:
@@ -55,7 +63,7 @@ def get_roll_factor_at(alignment1, alignment2, phase1):
             elif (
                 alignment1[idx1] >= 0
                 and not allow
-                and alignment1[idx1] == min(alignment1[alignment1 > 0])
+                and alignment1[idx1] == min(alignment1[alignment1 >= 0])
                 and alignment1[idx1] > phase1
             ):
                 # not gap and not started and is smallest in alignment1
@@ -65,32 +73,41 @@ def get_roll_factor_at(alignment1, alignment2, phase1):
                 lower_bound = idx1 - 1
                 upper_bound = idx1
                 logger.debug(
-                    "Preliminary bounds applied: {0}, {1} for {2}",
+                    "Preliminary bounds applied: {0} [{1}], {2} [{3}] for {4} (type1)",
                     lower_bound,
+                    alignment1[lower_bound],
                     upper_bound,
+                    alignment1[upper_bound],
                     phase1,
                 )
                 break
-            elif allow and alignment1[idx1] >= phase1:
+            elif allow and alignment1[idx1] > phase1:
                 # started and higher than phase1 (not gap implied)
                 lower_bound = idx1 - 1
                 upper_bound = idx1
                 logger.debug(
-                    "Preliminary bounds applied: {0}, {1} for {2}",
+                    "Preliminary bounds applied: {0} [{1}], {2} [{3}] for {4} (type1)",
                     lower_bound,
+                    alignment1[lower_bound],
                     upper_bound,
+                    alignment1[upper_bound],
                     phase1,
                 )
                 break
             elif allow and alignment1[idx1] == 0:
                 # started and wrap point (not gap implied)
+                # type2 wrap - set allow earlier but have now reached 0 value
+                # in alignment1 string and not found an alignment greater than
+                # phase1, i.e. presume it hovers between the highest value and the 0.
                 logger.info("Desired phase at alignment sequence 1 wrap point (type2)")
                 lower_bound = idx1 - 1
                 upper_bound = idx1
                 logger.debug(
-                    "Preliminary bounds applied: {0}, {1} for {2}",
+                    "Preliminary bounds applied: {0} [{1}], {2} [{3}] for {4} (type1)",
                     lower_bound,
+                    alignment1[lower_bound],
                     upper_bound,
+                    alignment1[upper_bound],
                     phase1,
                 )
                 break
@@ -98,44 +115,205 @@ def get_roll_factor_at(alignment1, alignment2, phase1):
         if lower_bound < 0 and upper_bound < 0 and not allow:
             # no valid bounds set
             # assume phase1 completely not in alignment then
+            # this should never happen so I don't have a test for it
             logger.critical("Phase not found in alignment sequence 1")
             logger.debug(phase1, alignment1)
             return None
 
-        # assume lower_bound < 0 and upper_bound < 0 and allow
-        # started searching but didn't set bounds
-        # assume bounds are around the wrap point
-        logger.info("Wrapping around alignment sequence 1")
-        lower_bound = idx1
-        upper_bound = idx1 + 1
-        while alignment1[upper_bound % length1] < 0:
-            upper_bound = upper_bound + 1
-        logger.debug(
-            "Preliminary bounds applied: {0}, {1} for {2}",
-            lower_bound,
-            upper_bound,
-            phase1,
-        )
+        if lower_bound < 0 and upper_bound < 0 and allow:
+            # started searching but didn't set bounds
+            # assume bounds are around the wrap point
+            # this type of wrap point is when alignment 1
+            # ends lower than it starts, i.e. the wrap point
+            # of the ids sequence is in the middle of the actual string
+            logger.info("Wrapping around alignment sequence 1")
+            lower_bound = idx1
+            upper_bound = idx1 + 1
+            logger.debug(
+                "Preliminary bounds applied: {0} [{1}], {2} [{3}] for {4} (type1)",
+                lower_bound,
+                alignment1[lower_bound],
+                upper_bound,
+                alignment1[upper_bound % length1],
+                phase1,
+            )
 
-        # DEVNOTE: currently the lower and upper bounds don't deal with any gaps, i.e. -1s
+        # account for gaps in upper bound
+        while alignment1[upper_bound % length1] < 0:
+            logger.debug("Increasing upper bound by one due to indel.")
+            upper_bound = upper_bound + 1
         # account for gaps in lower bound
-        while alignment1[lower_bound] < 0:
-            # if currently gap keep lowering the lower bound
+        while alignment1[lower_bound % length1] < 0:
+            logger.debug("Decreasing lower bound by one due to indel.")
             lower_bound = lower_bound - 1
+
         logger.info(
             "Interpolating with lower bound of {0} and upper bound of {1}",
             lower_bound,
             upper_bound % length1,
         )
 
-        interpolated_index1 = (phase1 - alignment1[lower_bound]) / (
-            alignment1[upper_bound % length1] - alignment1[lower_bound]
+        logger.debug(
+            "{0} {1} {2} {3} {4}",
+            lower_bound,
+            upper_bound,
+            length1,
+            lower_bound % length1,
+            upper_bound % length1,
         )
+        if (
+            upper_bound % length1 == upper_bound
+            and lower_bound % length1 == lower_bound
+            and alignment1[upper_bound % length1] > alignment1[lower_bound % length1]
+        ):
+            logger.debug(
+                "Both upper and lower bounds within period1 and no wrapping in idx occurred."
+            )
+            interpolated_index1 = (phase1 - alignment1[lower_bound]) / (
+                alignment1[upper_bound] - alignment1[lower_bound]
+            )
+            logger.debug(
+                "interpolated index {0} = ({1} - {2}) / ({3} - {4}) = {5} / {6};",
+                interpolated_index1,
+                phase1,
+                alignment1[lower_bound],
+                alignment1[upper_bound],
+                alignment1[lower_bound],
+                (phase1 - alignment1[lower_bound]),
+                (alignment1[upper_bound] - alignment1[lower_bound]),
+            )
+        elif (
+            upper_bound % length1 == upper_bound
+            and lower_bound % length1 == lower_bound
+            and not alignment1[upper_bound % length1]
+            > alignment1[lower_bound % length1]
+        ):
+            logger.debug(
+                "Both upper and lower bounds within period1 but wrapping in idx occurred at upper bound."
+            )
+            interpolated_index1 = (phase1 - alignment1[lower_bound]) / (
+                alignment1.max() + 1 + alignment1[upper_bound] - alignment1[lower_bound]
+            )
+            logger.debug(
+                "interpolated index {0} = ({1} - {2}) / ({3} + {4} -{5}) = {6} / {7};",
+                interpolated_index1,
+                phase1,
+                alignment1[lower_bound],
+                alignment1.max() + 1,
+                alignment1[upper_bound],
+                alignment1[lower_bound],
+                (phase1 - alignment1[lower_bound]),
+                (alignment1.max() + alignment1[upper_bound] - alignment1[lower_bound]),
+            )
+        elif (
+            upper_bound % length1 == upper_bound
+            and not lower_bound % length1 == lower_bound
+            and alignment1[upper_bound % length1] > alignment1[lower_bound % length1]
+        ):
+            logger.debug(
+                "Only upper bound within period1 and no wrapping in idx occurred."
+            )
+            interpolated_index1 = (
+                phase1 - alignment1[lower_bound % length1] + length1
+            ) / (alignment1[upper_bound] - alignment1[lower_bound % length1])
+            logger.debug(
+                "interpolated index {0} = ({1} - {2}) / ({3} - {4}) = {5} / {6};",
+                interpolated_index1,
+                phase1,
+                alignment1[lower_bound % length1],
+                alignment1[upper_bound],
+                alignment1[lower_bound % length1],
+                (phase1 - alignment1[lower_bound % length1]),
+                (alignment1[upper_bound] - alignment1[lower_bound % length1]),
+            )
+        elif (
+            upper_bound % length1 == upper_bound
+            and not lower_bound % length1 == lower_bound
+            and not alignment1[upper_bound % length1]
+            > alignment1[lower_bound % length1]
+        ):
+            logger.debug(
+                "Only upper bound within period but wrapping in idx occurred at upper bound."
+            )
+            interpolated_index1 = (
+                phase1 - alignment1[lower_bound % length1] + length1
+            ) / (
+                alignment1.max()
+                + 1
+                + alignment1[upper_bound]
+                - alignment1[lower_bound % length1]
+            )
+            logger.debug(
+                "interpolated index {0} = ({1} - {2}) / ({3} + {4} - {5}) = {6} / {7};",
+                interpolated_index1,
+                phase1,
+                alignment1[lower_bound % length1],
+                alignment1.max(),
+                alignment1[upper_bound],
+                alignment1[lower_bound % length1],
+                (phase1 - alignment1[lower_bound % length1]),
+                (
+                    alignment1.max()
+                    + 1
+                    + alignment1[upper_bound]
+                    - alignment1[lower_bound % length1]
+                ),
+            )
+        elif (
+            not upper_bound % length1 == upper_bound
+            and lower_bound % length1 == lower_bound
+            and alignment1[upper_bound % length1] > alignment1[lower_bound % length1]
+        ):
+            logger.debug(
+                "Only lower bound within period1 and no wrapping in idx occurred."
+            )
+            interpolated_index1 = (phase1 - alignment1[lower_bound]) / (
+                alignment1[upper_bound % length1] - alignment1[lower_bound]
+            )
+            logger.debug(
+                "interpolated index {0} = ({1} - {2}) / ({4} - {5}) = {6} / {7};",
+                interpolated_index1,
+                phase1,
+                alignment1[lower_bound],
+                length1,
+                alignment1[upper_bound % length1],
+                alignment1[lower_bound],
+                (phase1 - alignment1[lower_bound]),
+                (alignment1[upper_bound % length1] - alignment1[lower_bound]),
+            )
+        elif (
+            not upper_bound % length1 == upper_bound
+            and lower_bound % length1 == lower_bound
+            and not alignment1[upper_bound % length1]
+            > alignment1[lower_bound % length1]
+        ):
+            logger.debug(
+                "Only lower bound within period1 but wrapping in idx occurred at upper bound."
+            )
+            interpolated_index1 = (phase1 - alignment1[lower_bound]) / (
+                +length1 + alignment1[upper_bound % length1] - alignment1[lower_bound]
+            )
+            logger.debug(
+                "interpolated index {0} = ({1} - {2}) / ({3} + {4} - {5}) = {6} / {7};",
+                interpolated_index1,
+                phase1,
+                alignment1[lower_bound],
+                length1,
+                alignment1[upper_bound % length1],
+                alignment1[lower_bound],
+                (phase1 - alignment1[lower_bound]),
+                (alignment1[upper_bound % length1] - alignment1[lower_bound]),
+            )
+        else:
+            pass
+            logger.critical("I don't think this should ever be reached!")
 
-        logger.info("Phase positioned at interpolated index {0} in alignment 1", idxPos)
         idxPos = (interpolated_index1 * (upper_bound - lower_bound)) + lower_bound
 
+        logger.info("Phase positioned at interpolated index {0} in alignment 1", idxPos)
+
         logger.debug(
+            "phase1 := {0};\tlower_bound := {1};\talignment1 := {2};\tupper_bound := {3};\t length1 := {4};\t(upper_bound %% length1) := {5};\talignment1 := {6};\tinterpolated_index1 :={7};",
             phase1,
             lower_bound,
             alignment1[lower_bound],
@@ -143,8 +321,8 @@ def get_roll_factor_at(alignment1, alignment2, phase1):
             length1,
             upper_bound % length1,
             alignment1[upper_bound % length1],
+            interpolated_index1,
         )
-        logger.debug(interpolated_index1)
 
     # Map precise index to alignment2, considering gaps
     # case where phase captured in alignment1 is integer and valid in alignment2
@@ -158,11 +336,14 @@ def get_roll_factor_at(alignment1, alignment2, phase1):
     ):
         # index is integer, less than the length of alignment sequence 2 and that position isn't a gap
         phase2 = alignment2[int(idxPos)]
-        logger.info("Exact index used in alignment 2 to give a phase of {0}", phase1)
-        logger.debug(alignment2[int(idxPos)])
+        logger.info(
+            "Exact index {0} used in alignment 2 [{1}] to match a phase of {2}",
+            idxPos,
+            phase2,
+            phase1,
+        )
 
     else:
-        length2 = len(alignment2)
         alignment2_lower_bound = int(idxPos)  # same as np.floor
         alignment2_upper_bound = int(idxPos + 1)  # same as np.ceil
         logger.debug("{0} {1}", alignment2_lower_bound, alignment2_upper_bound)
@@ -170,6 +351,7 @@ def get_roll_factor_at(alignment1, alignment2, phase1):
 
         # check not same value (occurs when exactly hits an index)
         if alignment2_lower_bound == alignment2_upper_bound:
+            logger.debug("Lower and upper bounds equal; increasing upper bound.")
             alignment2_upper_bound = alignment2_upper_bound + 1
 
         # deal with gaps in alignment2
@@ -181,9 +363,233 @@ def get_roll_factor_at(alignment1, alignment2, phase1):
         # interpolate for exact position
         logger.debug(
             "Interpolating with lower bound of {0} and upper bound of {1}",
-            alignment2_lower_bound,
+            alignment2_lower_bound % length2,
             alignment2_upper_bound % length2,
         )
+
+        # FIXME
+        if (
+            alignment2_upper_bound % length2 == alignment2_upper_bound
+            and alignment2_lower_bound % length2 == alignment2_lower_bound
+            and alignment2[alignment2_upper_bound % length2]
+            > alignment2[alignment2_lower_bound % length2]
+        ):
+            logger.debug(
+                "Both upper and lower bounds within period and no wrapping occurred."
+            )
+            interpolated_index2 = (idxPos - alignment2_lower_bound) / (
+                alignment2_upper_bound - alignment2_lower_bound
+            )
+            logger.debug(
+                "interpolated index2 {0} = ({1} - {2}) / ({3} - {4}) = {5} / {6};",
+                interpolated_index2,
+                idxPos,
+                alignment2_lower_bound,
+                alignment2_upper_bound,
+                alignment2_lower_bound,
+                (idxPos - alignment2_lower_bound),
+                (alignment2_upper_bound - alignment2_lower_bound),
+            )
+            phase2 = (
+                interpolated_index2 * (alignment2[alignment2_upper_bound] + 1)
+            ) + alignment2[alignment2_lower_bound]
+            logger.debug(
+                "phase2 {0} = {1} * ({2} + {3} + 1) + {4} = {5} * {6} + {7};",
+                phase2,
+                interpolated_index2,
+                alignment2.max(),
+                alignment2[alignment2_upper_bound % length2],
+                alignment2[alignment2_lower_bound],
+                interpolated_index2,
+                (alignment2.max() + alignment2[alignment2_upper_bound] + 1),
+                alignment2[alignment2_lower_bound],
+            )
+        elif (
+            alignment2_upper_bound % length2 == alignment2_upper_bound
+            and alignment2_lower_bound % length2 == alignment2_lower_bound
+            and not alignment2[alignment2_upper_bound % length2]
+            > alignment2[alignment2_lower_bound % length2]
+        ):
+            logger.debug(
+                "Both upper and lower bounds within period but wrapping occurred in alignment2_upper_bound."
+            )
+            interpolated_index2 = (idxPos - alignment2_lower_bound) / (
+                alignment2_upper_bound - alignment2_lower_bound
+            )
+            logger.debug(
+                "interpolated index2 {0} = ({1} - {2}) / ({3} - {4}) = {5} / {6};",
+                interpolated_index2,
+                idxPos,
+                alignment2_lower_bound,
+                alignment2_upper_bound,
+                alignment2_lower_bound,
+                (idxPos - alignment2_lower_bound),
+                (alignment2_upper_bound - alignment2_lower_bound),
+            )
+            phase2 = (
+                interpolated_index2
+                * (alignment2.max() + alignment2[alignment2_upper_bound] + 1)
+            ) + alignment2[alignment2_lower_bound]
+            logger.debug(
+                "phase2 {0} = {1} * ({2} + {3} + 1) + {4} = {5} * {6} + {7};",
+                phase2,
+                interpolated_index2,
+                alignment2.max(),
+                alignment2[alignment2_upper_bound % length2],
+                alignment2[alignment2_lower_bound],
+                interpolated_index2,
+                (alignment2.max() + alignment2[alignment2_upper_bound] + 1),
+                alignment2[alignment2_lower_bound],
+            )
+        elif (
+            alignment2_upper_bound % length2 == alignment2_upper_bound
+            and not alignment2_lower_bound % length2 == alignment2_lower_bound
+            and alignment2[alignment2_upper_bound % length2]
+            > alignment2[alignment2_lower_bound % length2]
+        ):
+            logger.debug("Only upper bound within period and no wrapping occurred.")
+            interpolated_index2 = (idxPos - alignment2_lower_bound + length2) / (
+                alignment2_upper_bound - alignment2_lower_bound
+            )
+            logger.debug(
+                "interpolated index2 {0} = ({1} - {2} + {3}) / ({4} - {5}) = {6} / {7};",
+                interpolated_index2,
+                idxPos,
+                alignment2_lower_bound,
+                length2,
+                alignment2_upper_bound,
+                alignment2_lower_bound,
+                (idxPos - alignment2_lower_bound),
+                (alignment2_upper_bound - alignment2_lower_bound),
+            )
+            phase2 = (
+                interpolated_index2 * (alignment2[alignment2_upper_bound] + 1)
+            ) + alignment2[alignment2_lower_bound]
+            logger.debug(
+                "phase2 {0} = {1} * ({2} + {3} + 1) + {4} = {5} * {6} + {7};",
+                phase2,
+                interpolated_index2,
+                alignment2.max(),
+                alignment2[alignment2_upper_bound % length2],
+                alignment2[alignment2_lower_bound],
+                interpolated_index2,
+                (alignment2.max() + alignment2[alignment2_upper_bound] + 1),
+                alignment2[alignment2_lower_bound],
+            )
+        elif (
+            alignment2_upper_bound % length2 == alignment2_upper_bound
+            and not alignment2_lower_bound % length2 == alignment2_lower_bound
+            and not alignment2[alignment2_upper_bound % length2]
+            > alignment2[alignment2_lower_bound % length2]
+        ):
+            logger.debug(
+                "Only upper bound within period but wrapping occurred in upper bound."
+            )
+            interpolated_index2 = (idxPos - alignment2_lower_bound + length2) / (
+                alignment2_upper_bound - alignment2_lower_bound
+            )
+            logger.debug(
+                "interpolated index2 {0} = ({1} - {2} + {3}) / ({4} - {5}) = {6} / {7};",
+                interpolated_index2,
+                idxPos,
+                alignment2_lower_bound,
+                length2,
+                alignment2_upper_bound,
+                alignment2_lower_bound,
+                (idxPos - alignment2_lower_bound),
+                (alignment2_upper_bound - alignment2_lower_bound),
+            )
+            phase2 = (
+                interpolated_index2
+                * (alignment2.max() + alignment2[alignment2_upper_bound] + 1)
+            ) + alignment2[alignment2_lower_bound]
+            logger.debug(
+                "phase2 {0} = {1} * ({2} + {3} + 1) + {4} = {5} * {6} + {7};",
+                phase2,
+                interpolated_index2,
+                alignment2.max(),
+                alignment2[alignment2_upper_bound % length2],
+                alignment2[alignment2_lower_bound],
+                interpolated_index2,
+                (alignment2.max() + alignment2[alignment2_upper_bound] + 1),
+                alignment2[alignment2_lower_bound],
+            )
+        elif (
+            not alignment2_upper_bound % length2 == alignment2_upper_bound
+            and alignment2_lower_bound % length2 == alignment2_lower_bound
+            and alignment2[alignment2_upper_bound % length2]
+            > alignment2[alignment2_lower_bound % length2]
+        ):
+            logger.debug("Only lower bound within period and no wrapping.")
+            interpolated_index2 = (idxPos - alignment2_lower_bound) / (
+                alignment2_upper_bound - alignment2_lower_bound
+            )
+            logger.debug(
+                "interpolated index2 {0} = ({1} - {2}) / ({4} - {5}) = {6} / {7};",
+                interpolated_index2,
+                idxPos,
+                alignment2_lower_bound,
+                length2,
+                alignment2_upper_bound,
+                alignment2_lower_bound,
+                (idxPos - alignment2_lower_bound),
+                (alignment2_upper_bound - alignment2_lower_bound),
+            )
+            phase2 = (
+                interpolated_index2 * (alignment2[alignment2_upper_bound % length2] + 1)
+            ) + alignment2[alignment2_lower_bound]
+            logger.debug(
+                "phase2 {0} = {1} * ({2} + {3} + 1) + {4} = {5} * {6} + {7};",
+                phase2,
+                interpolated_index2,
+                alignment2.max(),
+                alignment2[alignment2_upper_bound % length2],
+                alignment2[alignment2_lower_bound],
+                interpolated_index2,
+                (alignment2.max() + alignment2[alignment2_upper_bound % length2] + 1),
+                alignment2[alignment2_lower_bound],
+            )
+        elif (
+            not alignment2_upper_bound % length2 == alignment2_upper_bound
+            and alignment2_lower_bound % length2 == alignment2_lower_bound
+            and not alignment2[alignment2_upper_bound % length2]
+            > alignment2[alignment2_lower_bound % length2]
+        ):
+            logger.debug(
+                "Only lower bound within period but wrapping occurred in upper bound."
+            )
+            interpolated_index2 = (idxPos - alignment2_lower_bound) / (
+                alignment2_upper_bound - alignment2_lower_bound
+            )
+            logger.debug(
+                "interpolated index2 {0} = ({1} - {2}) / ({4} - {5}) = {6} / {7};",
+                interpolated_index2,
+                idxPos,
+                alignment2_lower_bound,
+                length2,
+                alignment2_upper_bound,
+                alignment2_lower_bound,
+                (idxPos - alignment2_lower_bound),
+                (alignment2_upper_bound - alignment2_lower_bound),
+            )
+            phase2 = (
+                interpolated_index2
+                * (alignment2.max() + alignment2[alignment2_upper_bound % length2] + 1)
+            ) + alignment2[alignment2_lower_bound]
+            logger.debug(
+                "phase2 {0} = {1} * ({2} + {3} + 1) + {4} = {5} * {6} + {7};",
+                phase2,
+                interpolated_index2,
+                alignment2.max(),
+                alignment2[alignment2_upper_bound % length2],
+                alignment2[alignment2_lower_bound],
+                interpolated_index2,
+                (alignment2.max() + alignment2[alignment2_upper_bound % length2] + 1),
+                alignment2[alignment2_lower_bound],
+            )
+        else:
+            pass
+            logger.critical("I don't think this should ever be reached!")
 
         interpolated_index2 = (idxPos - alignment2_lower_bound) / (
             alignment2_upper_bound - alignment2_lower_bound
@@ -215,11 +621,12 @@ def get_roll_factor_at(alignment1, alignment2, phase1):
             "Interpolated index used to calculate phase of {0} in alignment 2", phase2
         )
 
-        phase2 = phase2 % length2
-
     if phase2 is None:
         logger.critical("No phase calculated for alignment sequence 2")
-    return phase2
+
+    roll_factor = (phase1 - phase2) % length2  # TODO - why?!
+
+    return roll_factor
 
 
 def fill_traceback_matrix(score_matrix, gap_penalty=0):
@@ -327,14 +734,19 @@ def construct_cascade(score_matrix, gap_penalty=0, axis=0):
     ):  # the 1-axis tricks means we loop over 0 if axis=1 and vice versa
         logger.info("Getting score matrix for roll of {0} frames...", n)
         cascades[:, :, n] = fill_traceback_matrix(score_matrix, gap_penalty=gap_penalty)
-        score_matrix = roll_score_matrix(score_matrix, 1, axis=axis)
+        score_matrix = roll_score_matrix(score_matrix, -1, axis=axis)
 
     return cascades
 
 
 def traverse_traceback_matrix(sequence, template_sequence, traceback_matrix):
     """Traverse a tracbeack matrix and return aligned versions of two sequences.
-    The tempkate_sequence is less likely to have indels inserted."""
+    The template_sequence is less likely to have indels inserted."""
+    if isinstance(sequence, list):
+        sequence = np.array(sequence)
+    if isinstance(template_sequence, list):
+        template_sequence = np.array(template_sequence)
+
     x = template_sequence.shape[0]
     y = sequence.shape[0]
 
@@ -433,11 +845,39 @@ def traverse_traceback_matrix(sequence, template_sequence, traceback_matrix):
     return alignmentA, alignmentB
 
 
+def wrap_and_roll(alignmentAWrapped, period, roll_factor):
+    """Roll an alignment by roll_factor, taking care of indels."""
+    alignmentA = []
+    indels = []
+    logger.debug("Wrapped alignment with indels: {0}", alignmentAWrapped)
+    logger.debug("Period: {0}; Roll_factor: {1}", period, roll_factor)
+    for position in np.arange(alignmentAWrapped.shape[0]):
+        # for each alignment idx
+        if alignmentAWrapped[position] > -1:
+            # if not gap, add to output
+            alignmentA.append((alignmentAWrapped[position] - roll_factor) % (period))
+        else:
+            # if gap, work out the value to put the indel before
+            idx = position - 1
+            before = -1
+            while before < 0 and (idx % period) < alignmentAWrapped.shape[0]:
+                before = alignmentAWrapped[(idx) % len(alignmentAWrapped)]
+                idx = (idx + 1) % period
+            indels.append(before)
+    logger.debug("Unwrapped alignment with no indels: {0}", alignmentA)
+    # go through the indels from end to start and insert them
+    for indel in indels[::-1]:
+        alignmentA.insert(alignmentA.index(indel) + 1, -1)
+    alignmentA = np.array(alignmentA)
+    logger.debug("Unwrapped alignment with indels: {0}", alignmentA)
+    return alignmentA
+
+
 def cascading_needleman_wunsch(
     sequence,
     template_sequence,
-    period,
-    template_period,
+    period=None,
+    template_period=None,
     gap_penalty=0,
     interpolation_factor=None,
     ref_seq_phase=0,
@@ -466,22 +906,32 @@ def cascading_needleman_wunsch(
         len(template_sequence),
     )
 
-    if interpolation_factor is not None:
-        logger.info(
-            "Interpolating by a factor of {0} for greater precision...",
-            interpolation_factor,
-        )
-        sequence = hlp.interpolate_image_sequence(
-            sequence, period, interpolation_factor=interpolation_factor
-        )
-        template_sequence = hlp.interpolate_image_sequence(
-            template_sequence, period, interpolation_factor=interpolation_factor
-        )
-        logger.info(
-            "\tSequence #1 now has {0} frames and sequence #2 now has {1} frames:",
-            len(sequence),
-            len(template_sequence),
-        )
+    # if interpolation_factor is not None:
+    #     logger.info(
+    #         "Interpolating by a factor of {0} for greater precision...",
+    #         interpolation_factor,
+    #     )
+    #     logger.debug(sequence[:, 0, 0])
+    #     sequence = hlp.interpolate_image_sequence(
+    #         sequence, period, interpolation_factor=interpolation_factor
+    #     )
+    #     logger.debug(sequence[:, 0, 0])
+    #     period = interpolation_factor * period
+    #     logger.debug(template_sequence[:, 0, 0])
+    #     template_sequence = hlp.interpolate_image_sequence(
+    #         template_sequence,
+    #         template_period,
+    #         interpolation_factor=interpolation_factor,
+    #     )
+    #     logger.debug(template_sequence[:, 0, 0])
+    #     template_period = interpolation_factor * template_period
+    #     logger.info(
+    #         "Sequence #1 now has period of {0} [{1}] frames and sequence #2 now has period of {2} [{3}] frames:",
+    #         period,
+    #         len(sequence),
+    #         template_period,
+    #         len(template_sequence),
+    #     )
 
     # Calculate Score Matrix - C++
     score_matrix = jps.sad_grid(sequence, template_sequence)
@@ -489,7 +939,7 @@ def cascading_needleman_wunsch(
     logger.debug("Score Matrix:")
     logger.debug(score_matrix)
     logger.debug(
-        "\tDtype: {0};\tShape: ({1},{2})",
+        "Dtype: {0};\tShape: ({1},{2})",
         score_matrix.dtype,
         score_matrix.shape[0],
         score_matrix.shape[1],
@@ -500,7 +950,7 @@ def cascading_needleman_wunsch(
     logger.debug("Unrolled Traceback Matrix:")
     logger.debug(cascades[:, :, 0])
     logger.debug(
-        "\tDtype: {0};\tShape: ({1},{2},{3})",
+        "Dtype: {0};\tShape: ({1},{2},{3})",
         cascades.dtype,
         cascades.shape[0],
         cascades.shape[1],
@@ -513,13 +963,14 @@ def cascading_needleman_wunsch(
     score = (score + (np.iinfo(sequence.dtype).max * sequence.size / 10)) / (
         np.iinfo(sequence.dtype).max * sequence.size / 10
     )
-    if score <= 0:
+    if score < 0:
         logger.warning("Negative Score")
-    score = 0 if score < 0 else score
+        score = 0
 
     traceback_matrix = cascades[:, :, roll_factor]
-    sequence = np.roll(sequence, roll_factor, axis=2)
-    logger.info("Chose cascade {0} of {1}:", roll_factor, len(sequence))
+    sequence = np.roll(sequence, roll_factor, axis=0)
+    logger.debug("Cascades scores {0}", cascades[-1, -1, :])
+    logger.info("Chose cascade {0} of {1}:", roll_factor+1, len(sequence))
     logger.debug("Cascaded traceback matrixes:")
     logger.debug(traceback_matrix)
     logger.debug(
@@ -533,115 +984,35 @@ def cascading_needleman_wunsch(
         sequence, template_sequence, traceback_matrix
     )
 
-    logger.info("roll_factor (interpolated):\t{0}", roll_factor)
+    logger.info("roll_factor (interpolated, base):\t{0}", roll_factor)
     logger.info("Aligned sequence #1 (interpolated, wrapped):\t{0}", alignmentAWrapped)
     logger.info("Aligned sequence #2 (interpolated):\t\t\t{0}", alignmentB)
 
-    if interpolation_factor is not None:
-        logger.info("De-interpolating for result...")
-        # Divide by interpolation factor and modulo period
-        # ignore -1s
-        alignmentAWrapped[alignmentAWrapped >= 0] = (
-            alignmentAWrapped[alignmentAWrapped >= 0] / interpolation_factor
-        ) % (period)
-        alignmentB[alignmentB >= 0] = (
-            alignmentB[alignmentB >= 0] / interpolation_factor
-        ) % (template_period)
-        roll_factor = (roll_factor / interpolation_factor) % (period)
-
-        logger.info("roll_factor:\t{0}", roll_factor)
-        logger.info("Aligned sequence #1 (wrapped):\t\t{0}", alignmentAWrapped)
-        logger.info("Aligned sequence #2:\t\t\t{0}", alignmentB)
-
     # roll Alignment A, taking care of indels
-    alignmentA = []
-    indels = []
-    for position in np.arange(alignmentAWrapped.shape[0]):
-        if alignmentAWrapped[position] > -1:
-            alignmentA.append((alignmentAWrapped[position] - roll_factor) % (period))
-        else:
-            idx = position - 1
-            before = -1
-            while before < 0 and idx < alignmentAWrapped.shape[0] - 1:
-                before = alignmentAWrapped[(idx) % len(alignmentAWrapped)]
-                idx = idx + 1
-            indels.append(before)
-    for indel in indels:
-        alignmentA.insert(alignmentA.index(indel) + 1, -1)
-    alignmentA = np.array(alignmentA)
+    alignmentA = wrap_and_roll(alignmentAWrapped, period, roll_factor)
 
     # get roll_factor properly
     roll_factor = get_roll_factor_at(alignmentA, alignmentB, ref_seq_phase)
 
-    logger.info("roll_factor:\t{0}", roll_factor)
-    logger.info("Aligned sequence #1 (unwrapped):\t", alignmentA)
-    logger.info("Aligned sequence #2:\t\t\t", alignmentB)
+    logger.info("roll_factor (interpolated, specific):\t{0}", roll_factor)
+    logger.info("Aligned sequence #1 (interpolated, unwrapped):\t{0}", alignmentA)
+    logger.info("Aligned sequence #2 (interpolated):\t\t\t{0}", alignmentB)
+
+    # # Undo interpolation
+    # if interpolation_factor is not None:
+    #     logger.info("De-interpolating for result...")
+    #     # Divide by interpolation factor and modulo period
+    #     # ignore -1s
+    #     alignmentA[alignmentA >= 0] = (
+    #         alignmentA[alignmentA >= 0] / interpolation_factor
+    #     ) % (period)
+    #     alignmentB[alignmentB >= 0] = (
+    #         alignmentB[alignmentB >= 0] / interpolation_factor
+    #     ) % (template_period)
+    #     roll_factor = (roll_factor / interpolation_factor) % (period)
+
+    #     logger.info("roll_factor:\t{0}", roll_factor)
+    #     logger.info("Aligned sequence #1 (wrapped):\t\t{0}", alignmentA)
+    #     logger.info("Aligned sequence #2:\t\t\t{0}", alignmentB)
 
     return alignmentA, alignmentB, roll_factor, score
-
-
-# if __name__ == "__main__":
-# roll = 7
-# gap_penalty = 1
-# shape = (1024, 1024)
-
-# # Toy Example
-# # toySequenceA and B have very slightly different rhythms but the same period
-# toySequenceA = np.asarray(
-#     [100, 150, 175, 200, 225, 230, 205, 180, 155, 120], dtype="uint8"
-# )
-# toySequenceA = np.roll(toySequenceA, -roll)
-# periodA = toySequenceA.shape[0]
-# toySequenceB = np.asarray(
-#     [100, 125, 150, 175, 200, 225, 230, 205, 180, 120], dtype="uint8"
-# )
-# periodB = toySequenceB.shape[0]  # -0.5
-# logger.info("Running toy example with:")
-# logger.info("\tSequence A: ", toySequenceA)
-# logger.info("\tSequence B: ", toySequenceB)
-
-# # Make sequences 3D arrays (as expected for this algorithm)
-# ndSequenceA = toySequenceA[:, np.newaxis, np.newaxis]
-# ndSequenceB = toySequenceB[:, np.newaxis, np.newaxis]
-# ndSequenceA = np.repeat(
-#     np.repeat(ndSequenceA, shape[0], 1), shape[1], 2
-# )  # make each frame actually 2D to check everything works for image frames
-# ndSequenceB = np.repeat(np.repeat(ndSequenceB, shape[0], 1), shape[1], 2)
-
-# alignmentA, alignmentB, roll_factor, score = cascading_needleman_wunsch(
-#     ndSequenceA, ndSequenceB, periodA, periodB, gap_penalty=gap_penalty
-# )
-# logger.info("Roll factor: {0} (score: {1})", roll_factor, score)
-# logger.info("Alignment Maps:")
-# logger.info("\tMap A: {0}", alignmentA)
-# logger.info("\tMap B: {0}", alignmentB)
-
-# # Outputs for toy examples
-# alignedSequenceA = []  # Create new lists to fill with aligned values
-# alignedSequenceB = []
-# for i in alignmentA:  # fill new sequence A
-#     if i < 0:  # indel
-#         alignedSequenceA.append(-1)
-#     else:
-#         alignedSequenceA.append(hlp.linear_interpolation(ndSequenceA, i)[0, 0])
-# for i in alignmentB:  # fill new sequence B
-#     if i < 0:  # indel
-#         alignedSequenceB.append(-1)
-#     else:
-#         alignedSequenceB.append(hlp.linear_interpolation(ndSequenceB, i)[0, 0])
-
-# # Print
-# score = 0
-# for i, j in zip(alignedSequenceA, alignedSequenceB):
-#     if i > -1 and j > -1:
-#         i = float(i)
-#         j = float(j)
-#         score = score - np.abs(i - j)
-#     elif i > -1:
-#         score = score - i
-#     elif j > -1:
-#         score = score - j
-# logger.info("Aligned Sequences:")
-# logger.info("\tMap A: {0}", alignmentA)
-# logger.info("\tMap B: {0}", alignmentB)
-# logger.info("Final Score: {0}", score)

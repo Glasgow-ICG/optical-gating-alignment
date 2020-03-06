@@ -6,15 +6,22 @@ def toy_sequence(length=0, seq_type="image", knowledge_type="random", dtype="uin
     if seq_type == "image":
         if knowledge_type == "random":
             sequence = np.random.randint(0, 2 ** 8, [length, 64, 128]).astype(dtype)
-        if knowledge_type == "known":
+        elif knowledge_type == "known":
             # 'string' with uint8 triangular intensity pattern
-            string = [0, 3, 15, 63, 255, 63, 15, 3, 0]
+            string = [1, 3, 15, 63, 255, 64, 16, 4, 2]
             # convert to uint8 'image sequence' (1x1 frame)
             sequence = np.asarray(string, "uint8").reshape([len(string), 1, 1])
             # convert to rectangular array (64x128 frame)
             sequence = np.repeat(np.repeat(sequence, 64, 1), 128, 2).astype(dtype)
-    if seq_type == "alignment":
-        sequence = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        elif knowledge_type == "tiny":
+            # 'string' with uint8 triangular intensity pattern
+            string = [1, 63, 255, 64, 2]
+            # convert to uint8 'image sequence' (1x1 frame)
+            sequence = np.asarray(string, "uint8").reshape([len(string), 1, 1])
+            # convert to rectangular array (64x128 frame)
+            sequence = np.repeat(np.repeat(sequence, 64, 1), 128, 2).astype(dtype)
+    elif seq_type == "alignment":
+        sequence = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
     return sequence
 
 
@@ -186,6 +193,7 @@ def test_interpolate_image_sequence_uint16_1():
 
 
 def test_interpolate_image_sequence_uint8_known():
+    # assumes the code was correct at the time this test was made
     # create a rectangular uint8 'image' sequence with known values
     sequence = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint8")
     # use integer period
@@ -196,13 +204,13 @@ def test_interpolate_image_sequence_uint8_known():
 
     # this was very manual
     expected = [
-        0,
-        0,
-        0,
-        0,
         1,
         1,
         1,
+        1,
+        1,
+        2,
+        2,
         2,
         2,
         2,
@@ -242,42 +250,43 @@ def test_interpolate_image_sequence_uint8_known():
         197,
         178,
         159,
-        139,
-        120,
-        101,
-        82,
-        63,
-        58,
-        53,
-        48,
-        43,
-        39,
-        34,
-        29,
-        24,
-        19,
-        15,
+        140,
+        121,
+        102,
+        83,
+        64,
+        59,
+        54,
+        49,
+        44,
+        40,
+        35,
+        30,
+        25,
+        20,
+        16,
+        14,
         13,
         12,
         11,
         10,
-        9,
+        8,
         7,
         6,
         5,
         4,
         3,
+        3,
+        3,
+        3,
+        3,
         2,
         2,
         2,
-        1,
-        1,
-        1,
-        0,
-        0,
-        0,
+        2,
     ]
 
+    print(sequence[:, 1, 1], resampled_sequence[:, 1, 1])
     assert (
         np.all(expected == resampled_sequence[:, 1, 1])
         and resampled_sequence.dtype == np.uint8
@@ -285,6 +294,7 @@ def test_interpolate_image_sequence_uint8_known():
 
 
 def test_interpolate_image_sequence_uint16_known():
+    # assumes the code was correct at the time this test was made
     # create a rectangular uint16 'image' sequence with known values
     sequence = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint16")
     # use integer period
@@ -295,13 +305,13 @@ def test_interpolate_image_sequence_uint16_known():
 
     # this was very manual
     expected = [
-        0,
-        0,
-        0,
-        0,
         1,
         1,
         1,
+        1,
+        1,
+        2,
+        2,
         2,
         2,
         2,
@@ -341,40 +351,40 @@ def test_interpolate_image_sequence_uint16_known():
         197,
         178,
         159,
-        139,
-        120,
-        101,
-        82,
-        63,
-        58,
-        53,
-        48,
-        43,
-        39,
-        34,
-        29,
-        24,
-        19,
-        15,
+        140,
+        121,
+        102,
+        83,
+        64,
+        59,
+        54,
+        49,
+        44,
+        40,
+        35,
+        30,
+        25,
+        20,
+        16,
+        14,
         13,
         12,
         11,
         10,
-        9,
+        8,
         7,
         6,
         5,
         4,
         3,
+        3,
+        3,
+        3,
+        3,
         2,
         2,
         2,
-        1,
-        1,
-        1,
-        0,
-        0,
-        0,
+        2,
     ]
 
     assert (
