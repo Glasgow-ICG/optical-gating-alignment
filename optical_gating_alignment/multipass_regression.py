@@ -1,6 +1,5 @@
 """Modulo 2Pi multipass linear regression as used for phase locking in adaptive prospective optical gating systems."""
 
-
 import numpy as np
 from loguru import logger
 
@@ -13,8 +12,9 @@ logger.disable("optical-gating-alignment")
 
 def solve_for_shifts(shifts, number_of_sequences, ref_seq_id, ref_seq_phase):
     """Build a matrix/vector describing the system of equations Mx = a.
-    This expects an input of 'shifts' consisting of triplets of (seq1Index, seq2Index, shift) and an integer giving the number of sequences (maximum value appearing for sequence index should be number_of_sequences-1).
-    Note that this function forces the absolute phase of the first sequence to be equal to phaseForFirstSequence."""
+    Expects an input of 'shifts' consisting of (seq1Index, seq2Index, shift, score)
+    and an integer giving the number of sequences
+    (maximum value appearing for sequence index should be number_of_sequences-1)."""
 
     M = np.zeros((len(shifts) + 1, number_of_sequences))
     a = np.zeros(len(shifts) + 1)
@@ -33,15 +33,15 @@ def solve_for_shifts(shifts, number_of_sequences, ref_seq_id, ref_seq_phase):
     # !so 19624997/understanding-scipys-least-square-function-with-irls
     Mw = M * np.sqrt(w[:, np.newaxis])
     aw = a * np.sqrt(w)
-    (self_consistent_shifts, residuals, _, _) = np.linalg.lstsq(Mw, aw)
-    return (self_consistent_shifts, residuals)
+    (self_consistent_shifts, _, _, _) = np.linalg.lstsq(Mw, aw, rcond=None)
+    return self_consistent_shifts
 
 
 def solve_with_maximum_range(
     shifts, number_of_sequences, maximum_range, ref_seq_id, ref_seq_phase
 ):
-    """Solve for shifts but only use pairwise information for shifts within a certain maximum range of each other,
-    i.e. if maximum_range=1 then only use adjacent shifts."""
+    """Solve for shifts but only use pairwise information for shifts within a given
+    range of each other, i.e. if maximum_range=1 then only use adjacent shifts."""
     shifts_to_use = []
     for shift in shifts:
         # (i, j, shift, score) = shifts[n]
@@ -59,16 +59,16 @@ def solve_with_maximum_range(
 
 
 def adjust_shifts_to_match_solution(shifts, partial_solution, periods, warn_to=65536):
-    """ Now adjust the longer-distance shifts so they match our initial solution."""
+    """Now adjust the longer-distance shifts so they match our initial solution."""
 
     adjusted_shifts = []
     # DEVNOTE: JT's original code has isinstance (periods, (int,long))
-    # This is Python2 syntac and not needed in Python3
+    # This is Python2 syntax and not needed in Python3
     if isinstance(periods, int) or len(periods) == 1:
         period = periods
     for (i, j, shift, score) in shifts:
         # (i, j, shift, score) = shifts[n]
-        if type(periods) is list and len(periods) > 1:
+        if isinstance(periods, (list, np.ndarray)) and len(periods) > 1:
             period = periods[i]
         expected_wrapped_shift = (partial_solution[j] - partial_solution[i]) % period
         period_part = (
@@ -111,7 +111,7 @@ def make_shifts_self_consistent(
     The longer jumps serve to protect against gradual accumulation of random error in the absolute global phase, which would creep in if we only ever considered the relative shifts of adjacent sequences."""
 
     # First solve just using the shifts between adjacent slices (no phase wrapping)
-    (adjacent_shift_solution, adjacent_residuals) = solve_with_maximum_range(
+    adjacent_shift_solution = solve_with_maximum_range(
         shifts, number_of_sequences, 1, ref_seq_id, ref_seq_phase
     )
 
@@ -129,17 +129,11 @@ def make_shifts_self_consistent(
     # decide which way to adjust long-range shifts that were initially unclear
     adjusted_shifts = list(adjacent_shifts)
     for r in [32, 128, 512, 2048]:
-        (shift_solution, residuals) = solve_with_maximum_range(
+        shift_solution = solve_with_maximum_range(
             adjusted_shifts, number_of_sequences, r, ref_seq_id, ref_seq_phase
         )
         adjusted_shifts = adjust_shifts_to_match_solution(
             shifts, shift_solution, period
         )
 
-    return (
-        shift_solution,
-        adjusted_shifts,
-        adjacent_shift_solution,
-        residuals,
-        adjacent_residuals,
-    )
+    return shift_solution

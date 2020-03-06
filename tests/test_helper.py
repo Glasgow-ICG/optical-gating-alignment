@@ -100,7 +100,7 @@ def test_interpolate_image_sequence_uint8_period():
     current_period = period_int - np.random.rand(1)
 
     accurate = []
-    for resample_factor in np.arange(5):
+    for resample_factor in np.arange(1, 5):
         # resample
         resampled_sequence = hlp.interpolate_image_sequence(
             sequence, current_period, resample_factor
@@ -151,7 +151,7 @@ def test_interpolate_image_sequence_uint16_period():
     current_period = period_int - np.random.rand(1)
 
     accurate = []
-    for resample_factor in np.arange(5):
+    for resample_factor in np.arange(1, 5):
         # resample
         resampled_sequence = hlp.interpolate_image_sequence(
             sequence, current_period, resample_factor

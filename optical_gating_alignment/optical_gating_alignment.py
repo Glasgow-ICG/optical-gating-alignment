@@ -219,11 +219,11 @@ def process_sequence(
                     sequence_history[i], sequence_history[-1], this_drift
                 )
                 if algorithm == "cc":
-                    (alignment, roll_factor, score) = cc.rolling_cross_correlation(
+                    (alignment1, alignment2, roll_factor, score) = cc.rolling_cross_correlation(
                         seq1, seq2, resampled_period, resampled_period, target=target
                     )
                 elif algorithm == "cnw":
-                    (alignment, roll_factor, score) = cnw.cascading_needleman_wunsch(
+                    (alignment1, alignment2 roll_factor, score) = cnw.cascading_needleman_wunsch(
                         seq1,
                         seq2,
                         period_history[i],
@@ -262,29 +262,15 @@ def process_sequence(
     logger.debug("Solution:")
     logger.debug(global_solution)
 
-    residuals = np.zeros([len(global_solution),])
-    # for i in range(len(global_solution)-1):
-    #     for shift in shift_history:
-    #         if shift[1] == shift_history[-1][1] and shift[0] == i:
-    #             residuals[i] = (global_solution[-1] -
-    #                             global_solution[i] - shift[2])
-    #             break
-    #     while residuals[i] > (period_history[i]/2):
-    #         residuals[i] = residuals[i]-period_history[i]
-    #     while residuals[i] < -(period_history[i]/2):
-    #         residuals[i] = residuals[i]+period_history[i]
-
-    logger.debug("Residuals:")
-    logger.debug(residuals)
     logger.info("Reference Frame rolling by: {0}", global_solution[-1])
 
     # Catch for outputs on first period
     if len(sequence_history) == 1:
         score = 0
-        alignment = []
+        alignment1 = []
 
     # Count indels in last returned alignment
-    indels = np.sum(alignment == -1)
+    indels = np.sum(alignment1 == -1)
 
     # Note for developers:
     # there are two other return statements in this function
@@ -294,7 +280,6 @@ def process_sequence(
         drift_history,
         shift_history,
         global_solution[-1],
-        residuals,
         score,
         indels,
     )
@@ -336,7 +321,6 @@ def process_sequence(
 #             driftHistory,
 #             shifts,
 #             roll_factor,
-#             residuals,
 #             score,
 #             indels,
 #         ) = process_sequence(
@@ -364,7 +348,6 @@ def process_sequence(
 #             driftHistoryDrift,
 #             shiftsDrift,
 #             roll_factor,
-#             residuals,
 #         ) = process_sequence(
 #             seq2,
 #             thisPeriod,
