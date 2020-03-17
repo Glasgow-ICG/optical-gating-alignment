@@ -18,8 +18,12 @@ def cross_correlation(sequence1, sequence2):
         + np.sum(sequence2 * sequence2)
         - 2 * np.sum(np.real(temp2), axis=1)
     )
+    logger.debug(np.sum(sequence1 * sequence1))
+    logger.debug(np.sum(sequence2 * sequence2))
+    logger.debug(np.sum(np.real(temp2), axis=1))
 
-    return scores
+    # FIXME without the - this is negative and ruins the linalg
+    return -scores
 
 
 def v_minimum(y1, y2, y3):
@@ -77,6 +81,7 @@ def rolling_cross_correlation(
     sequence1 = sequence1[:resampled_period].reshape([resampled_period, -1])
     sequence2 = sequence2[:resampled_period].reshape([resampled_period, -1])
     scores = cross_correlation(sequence1, sequence2)
+    logger.debug("Scores: {0}", scores)
 
     roll_factor, minimum_value = minimum_score(scores)
     roll_factor = (roll_factor / len(sequence1)) * length2
@@ -87,5 +92,6 @@ def rolling_cross_correlation(
     logger.info("Alignment 1:\t{0}", alignment1)
     logger.info("Alignment 2:\t{0}", alignment2)
     logger.info("Rolled by {0}", roll_factor)
+    logger.debug("Score: {0}", minimum_value)
 
     return (alignment1, alignment2, (target + roll_factor) % length2, minimum_value)

@@ -155,6 +155,7 @@ def test_rolling_cross_correlation_uint8_equal():
         )
         roll_factor = roll_factor % period2
 
+        print(roll, roll_factor)
         # small catch for floating point error
         accurate.append(np.abs(roll_factor - roll) < 1e6)
 
@@ -177,6 +178,7 @@ def test_rolling_cross_correlation_uint16_equal():
         )
         roll_factor = roll_factor % period2
 
+        print(roll, roll_factor)
         # small catch for floating point error
         accurate.append(np.abs(roll_factor - roll) < 1e6)
 
@@ -188,19 +190,20 @@ def test_rolling_cross_correlation_uint8_notequal():
     sequence1 = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint8")
     # use integer period
     period1 = len(sequence1)
+    period2 = period1
 
     accurate = []
     for roll in np.arange(period1):
-        sequence2 = np.roll(sequence1, roll, axis=0)
-        period2 = len(sequence2)
+        sequence2 = np.roll(sequence1[:-2], roll, axis=0)  # TODO
 
         (_, _, roll_factor, _) = cc.rolling_cross_correlation(
             sequence1, sequence2, period1, period2
         )
         roll_factor = roll_factor % period2
 
-        # catch a roll of ~0.4469 (known result)
-        accurate.append(np.abs(roll_factor - roll) < 0.45)
+        print(roll, roll_factor)
+        # small catch for floating point error
+        accurate.append(np.abs(roll_factor - roll) < 1e6)
 
     assert np.all(accurate)
 
@@ -210,18 +213,19 @@ def test_rolling_cross_correlation_uint16_notequal():
     sequence1 = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint16")
     # use integer period
     period1 = len(sequence1)
+    period2 = period1
 
     accurate = []
     for roll in np.arange(period1):
-        sequence2 = np.roll(sequence1, roll, axis=0)
-        period2 = len(sequence2)
+        sequence2 = np.roll(sequence1[:-2], roll, axis=0)  # TODO
 
         (_, _, roll_factor, _) = cc.rolling_cross_correlation(
             sequence1, sequence2, period1, period2
         )
         roll_factor = roll_factor % period2
 
-        # catch a roll of ~0.4469 (known result)
-        accurate.append(np.abs(roll_factor - roll) < 0.45)
+        print(roll, roll_factor)
+        # small catch for floating point error
+        accurate.append(np.abs(roll_factor - roll) < 1e6)
 
     assert np.all(accurate)

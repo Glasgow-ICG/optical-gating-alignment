@@ -28,11 +28,13 @@ def solve_for_shifts(shifts, number_of_sequences, ref_seq_id, ref_seq_phase):
     M[len(shifts), ref_seq_id] = 1
     a[len(shifts)] = ref_seq_phase
     w[len(shifts)] = 1
+    logger.debug("M := {0};\ta := {1};\tw := {2};", M, a, w)
 
     # This weighted least squares is from
     # !so 19624997/understanding-scipys-least-square-function-with-irls
     Mw = M * np.sqrt(w[:, np.newaxis])
     aw = a * np.sqrt(w)
+    logger.debug("Mw := {0};\taw := {1};", Mw, aw)
     (self_consistent_shifts, _, _, _) = np.linalg.lstsq(Mw, aw, rcond=None)
     return self_consistent_shifts
 

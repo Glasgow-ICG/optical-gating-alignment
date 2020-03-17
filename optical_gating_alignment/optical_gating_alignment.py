@@ -6,10 +6,10 @@ between sequences."""
 
 import numpy as np
 from loguru import logger
-import helper as hlp
-import cross_correlation as cc
-import cascading_needleman_wunsch as cnw
-import multipass_regression as mr
+import optical_gating_alignment.helper as hlp
+import optical_gating_alignment.cross_correlation as cc
+import optical_gating_alignment.cascading_needleman_wunsch as cnw
+import optical_gating_alignment.multipass_regression as mr
 
 # Set-up logger
 logger.disable("optical-gating-alignment")
@@ -69,6 +69,16 @@ def process_sequence(
     if type(this_sequence) is list:
         this_sequence = np.vstack(this_sequence)
 
+    # initialise sequences if empty
+    if sequence_history is None:
+        sequence_history = []
+    if period_history is None:
+        period_history = []
+    if drift_history is None:
+        drift_history = []
+    if shift_history is None:
+        shift_history = []
+
     # Check that the reference frames have a consistent shape
     for f in range(1, len(this_sequence)):
         if this_sequence[0].shape != this_sequence[f].shape:
@@ -81,13 +91,13 @@ def process_sequence(
                 this_sequence[f].shape,
             )
             # Return an error message and code to indicate the problem.
+            # there are two other return statements in this function
             return (
                 sequence_history,
                 period_history,
                 drift_history,
                 shift_history,
-                -1000.0,
-                None,
+                -1000,
                 None,
                 None,
             )
@@ -102,13 +112,13 @@ def process_sequence(
                 this_sequence[0].shape,
             )
             # Return an error message and code to indicate the problem.
+            # there are two other return statements in this function
             return (
                 sequence_history,
                 period_history,
                 drift_history,
                 shift_history,
-                -1000.0,
-                None,
+                -2000,
                 None,
                 None,
             )
@@ -151,7 +161,12 @@ def process_sequence(
             else:
                 if this_drift is None:
                     if algorithm == "cc":
-                        (alignment, target, score) = cc.rolling_cross_correlation(
+                        (
+                            alignment1,
+                            alignment2,
+                            target,
+                            score,
+                        ) = cc.rolling_cross_correlation(
                             sequence_history[ref_seq_id],
                             sequence_history[i],
                             resampled_period,
@@ -159,7 +174,12 @@ def process_sequence(
                             target=ref_seq_phase,
                         )
                     elif algorithm == "cnw":
-                        (alignment, target, score) = cnw.cascading_needleman_wunsch(
+                        (
+                            alignment1,
+                            alignment2,
+                            target,
+                            score,
+                        ) = cnw.cascading_needleman_wunsch(
                             sequence_history[ref_seq_id],
                             sequence_history[i],
                             period_history[ref_seq_id],
@@ -177,7 +197,12 @@ def process_sequence(
                         sequence_history[ref_seq_id], sequence_history[i], drift
                     )
                     if algorithm == "cc":
-                        (alignment, target, score) = cc.rolling_cross_correlation(
+                        (
+                            alignment1,
+                            alignment2,
+                            target,
+                            score,
+                        ) = cc.rolling_cross_correlation(
                             seq1,
                             seq2,
                             resampled_period,
@@ -185,7 +210,12 @@ def process_sequence(
                             target=ref_seq_phase,
                         )
                     if algorithm == "cnw":
-                        (alignment, target, score) = cnw.cascading_needleman_wunsch(
+                        (
+                            alignment1,
+                            alignment2,
+                            target,
+                            score,
+                        ) = cnw.cascading_needleman_wunsch(
                             seq1,
                             seq2,
                             period_history[ref_seq_id],
@@ -219,11 +249,21 @@ def process_sequence(
                     sequence_history[i], sequence_history[-1], this_drift
                 )
                 if algorithm == "cc":
-                    (alignment1, alignment2, roll_factor, score) = cc.rolling_cross_correlation(
+                    (
+                        alignment1,
+                        alignment2,
+                        roll_factor,
+                        score,
+                    ) = cc.rolling_cross_correlation(
                         seq1, seq2, resampled_period, resampled_period, target=target
                     )
                 elif algorithm == "cnw":
-                    (alignment1, alignment2 roll_factor, score) = cnw.cascading_needleman_wunsch(
+                    (
+                        alignment1,
+                        alignment2,
+                        roll_factor,
+                        score,
+                    ) = cnw.cascading_needleman_wunsch(
                         seq1,
                         seq2,
                         period_history[i],
@@ -251,7 +291,7 @@ def process_sequence(
     logger.debug("Printing shifts:")
     logger.debug(shift_history)
 
-    global_solution = mr.MakeShiftsSelfConsistent(
+    global_solution = mr.make_shifts_self_consistent(
         shift_history,
         len(sequence_history),
         period_history,
