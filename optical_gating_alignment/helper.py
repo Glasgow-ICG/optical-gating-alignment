@@ -5,46 +5,7 @@ for drift by taking the common window of two sequences."""
 import numpy as np
 
 
-def linear_interpolation(sequence, float_position, period=None, dtype=None):
-    """A linear interpolation function for a 'sequence' of ND items
-    Note: this is, currently, only for uint8 images. Why?
-    """
-    if dtype is None:
-        dtype = sequence.dtype
-    if period is None:
-        period = len(sequence)
-
-    # Bottom position
-    # equivalent to np.floor(float_position).astype('int)
-    lower_index = int(float_position)
-
-    if float_position // 1 == float_position:
-        # equivalent to sequence[np.floor(float_position).astype('int)]
-        interpolated_value = (
-            1.0 * sequence[lower_index]
-        )  # 1.0* needed to force numba type
-    else:
-
-        # Interpolation Ratio
-        interpolated_index = float_position - (float_position // 1)
-
-        # Top position
-        upper_index = lower_index + 1
-
-        remainder = (float_position - lower_index) / float(upper_index - lower_index)
-
-        # Values
-        lower_value = sequence[lower_index]
-        upper_value = sequence[int(upper_index % period)]
-
-        interpolated_value = lower_value * (1 - remainder) + upper_value * remainder
-
-    interpolated_value_int = interpolated_value.astype(dtype)
-
-    return interpolated_value_int
-
-
-def Interpolate(a, b, frac):
+def interpolate(a, b, frac):
     return a * (1 - frac) + b * frac
 
 
@@ -65,36 +26,18 @@ def interpolate_image_sequence(sequence, period, interpolation_factor=1, dtype=N
     if dtype == None:
         dtype = sequence.dtype
 
-    # Original coordinates
-    (_, m, n) = sequence.shape
-
-    # Interpolated space coordinates
-    p_indices_out = np.arange(0, period, 1 / interpolation_factor)  # supersample
-    p_out = len(p_indices_out)
-
-    # Sample at interpolated coordinates
-    # # DEVNOTE: The boundary condition is dealt with simplistically
-    # # ... but it works.
-    # interpolated_sequence = np.zeros((p_out, m, n), dtype=dtype)
-    # for i in np.arange(p_indices_out.shape[0]):
-    #     if p_indices_out[i] + 1 > len(sequence):  # boundary condition
-    #         interpolated_sequence[i, ...] = sequence[-1]
-    #     else:
-    #         interpolated_sequence[i, ...] = linear_interpolation(
-    #             sequence, p_indices_out[i], period=period, dtype=dtype
-    #         )
-
-    # stolen from JT - see if this is better with boundaries
     result = []
     for i in np.arange(period * interpolation_factor):
-        desiredPos = (i / float(period * interpolation_factor)) * period
-        beforePos = int(desiredPos)
-        afterPos = beforePos + 1
-        before = sequence[beforePos]
-        after = sequence[afterPos % len(sequence)]
-        remainder = (desiredPos - beforePos) / float(afterPos - beforePos)
+        desired_position = (i / float(period * interpolation_factor)) * period
+        before_position = int(desired_position)
+        after_position = before_position + 1
+        before_value = sequence[before_position]
+        after_value = sequence[after_position % len(sequence)]
+        remainder_value = (desired_position - before_position) / float(
+            after_position - before_position
+        )
 
-        image = Interpolate(before, after, remainder)
+        image = interpolate(before_value, after_value, remainder_value)
         result.append(image)
 
     return np.array(result, dtype=dtype)

@@ -403,7 +403,7 @@ def test_cascading_needleman_wunsch_self_uint8():
         sequence2 = np.roll(sequence1, roll, axis=0)
 
         for phase in np.arange(0.5, len(sequence1), 0.5):
-            alignmentA, alignmentB, roll_factor, score = cnw.cascading_needleman_wunsch(
+            _, _, roll_factor, _ = cnw.cascading_needleman_wunsch(
                 sequence1,
                 sequence2,
                 period=None,
@@ -432,7 +432,7 @@ def test_cascading_needleman_wunsch_self_uint8():
 #         sequence2 = np.roll(sequence1, roll, axis=0)
 
 #         for phase in np.arange(0.5, len(sequence1), 0.5):
-#             alignmentA, alignmentB, roll_factor, score = cnw.cascading_needleman_wunsch(
+#             _, _, roll_factor, _ = cnw.cascading_needleman_wunsch(
 #                 sequence1,
 #                 sequence2,
 #                 period=None,

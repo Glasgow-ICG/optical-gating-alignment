@@ -182,12 +182,7 @@ def process_sequence(
             if algorithm == "cc":
                 logger.info("Using cross correlation method.")
                 if this_drift is None:
-                    (
-                        alignment1,
-                        alignment2,
-                        roll_factor,
-                        score,
-                    ) = cc.rolling_cross_correlation(
+                    (alignment1, _, roll_factor, score,) = cc.rolling_cross_correlation(
                         sequence_history[i],
                         sequence_history[-1],
                         resampled_period,
