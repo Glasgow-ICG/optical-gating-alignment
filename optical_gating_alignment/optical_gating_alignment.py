@@ -214,7 +214,7 @@ def process_sequence(
                     (
                         i,
                         len(sequence_history) - 1,
-                        (roll_factor) % resampled_period,
+                        (roll_factor) % period_history[-1],
                         score,
                     )
                 )
@@ -313,7 +313,7 @@ def process_sequence(
                     1,
                 )
                 shift_history.append(
-                    (i, len(sequence_history) - 1, roll_factor, 1)
+                    (i, len(sequence_history) - 1, roll_factor % period_history[-1], 1)
                 )  # add score here
 
     logger.debug("Printing shifts:")
