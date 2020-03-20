@@ -690,21 +690,6 @@ def fill_traceback_matrix(score_matrix, gap_penalty=0):
     return traceback_matrix
 
 
-def roll_score_matrix(score_matrix, roll_factor=0, axis=0):
-    """Utility function to roll a 2D matrix along a given axis."""
-    rolled_score_matrix = np.zeros(score_matrix.shape, dtype=score_matrix.dtype)
-    for i in np.arange(score_matrix.shape[axis]):
-        if axis == 0:
-            rolled_score_matrix[i, :] = score_matrix[
-                (i - roll_factor) % score_matrix.shape[0], :
-            ]
-        elif axis == 1:
-            rolled_score_matrix[:, i] = score_matrix[
-                :, (i - roll_factor) % score_matrix.shape[1]
-            ]
-    return rolled_score_matrix
-
-
 def construct_cascade(score_matrix, gap_penalty=0, axis=0):
     """Create a 'cascade' of score arrays for use in the Needleman-Wunsch algorith.
 
@@ -731,7 +716,7 @@ def construct_cascade(score_matrix, gap_penalty=0, axis=0):
     ):  # the 1-axis tricks means we loop over 0 if axis=1 and vice versa
         logger.info("Getting score matrix for roll of {0} frames...", n)
         cascades[:, :, n] = fill_traceback_matrix(score_matrix, gap_penalty=gap_penalty)
-        score_matrix = roll_score_matrix(score_matrix, -1, axis=axis)
+        score_matrix = np.roll(score_matrix, -1, axis=axis)
 
     return cascades
 

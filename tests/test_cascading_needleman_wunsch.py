@@ -221,66 +221,6 @@ def test_traverse_traceback_matrix_self_uint8():
 #     assert np.all(accurate)
 
 
-def test_roll_score_matrix_self_uint8():
-    # toy image sequences
-    sequence1 = toy_sequence(
-        length=10, seq_type="image", knowledge_type="random", dtype="uint8"
-    )
-
-    # score matrix
-    score_matrix = jps.sad_grid(sequence1, sequence1)
-
-    accurate = []
-    for roll in np.arange(sequence1.shape[0] + 1):
-        rolled_score_matrix = cnw.roll_score_matrix(
-            score_matrix, roll_factor=roll, axis=0
-        )
-        accurate.append(
-            np.all(rolled_score_matrix == np.roll(score_matrix, roll, axis=0))
-        )
-
-    accurate = []
-    for roll in np.arange(sequence1.shape[1] + 1):
-        rolled_score_matrix = cnw.roll_score_matrix(
-            score_matrix, roll_factor=roll, axis=1
-        )
-        accurate.append(
-            np.all(rolled_score_matrix == np.roll(score_matrix, roll, axis=1))
-        )
-
-    assert np.all(accurate)
-
-
-# def test_roll_score_matrix_self_uint16():
-#     # toy image sequences
-#     sequence1 = toy_sequence(
-#         length=10, seq_type="image", knowledge_type="random", dtype="uint16"
-#     )
-
-#     # score matrix
-#     score_matrix = jps.sad_grid(sequence1, sequence1)
-
-#     accurate = []
-#     for roll in np.arange(sequence1.shape[0] + 1):
-#         rolled_score_matrix = cnw.roll_score_matrix(
-#             score_matrix, roll_factor=roll, axis=0
-#         )
-#         accurate.append(
-#             np.all(rolled_score_matrix == np.roll(score_matrix, roll, axis=0))
-#         )
-
-#     accurate = []
-#     for roll in np.arange(sequence1.shape[1] + 1):
-#         rolled_score_matrix = cnw.roll_score_matrix(
-#             score_matrix, roll_factor=roll, axis=1
-#         )
-#         accurate.append(
-#             np.all(rolled_score_matrix == np.roll(score_matrix, roll, axis=1))
-#         )
-
-#     assert np.all(accurate)
-
-
 def test_construct_cascade_self_uint8():
     # assumes the code was correct at the time this test was made
     # toy image sequences
