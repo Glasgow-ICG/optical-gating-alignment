@@ -5,10 +5,6 @@ for drift by taking the common window of two sequences."""
 import numpy as np
 
 
-def interpolate(a, b, frac):
-    return a * (1 - frac) + b * frac
-
-
 def interpolate_image_sequence(sequence, period, interpolation_factor=1, dtype=None):
     """Interpolate a series of images along a 'time' axis.
     Note: this is, currently, only for uint8 images. Why?
@@ -37,7 +33,7 @@ def interpolate_image_sequence(sequence, period, interpolation_factor=1, dtype=N
             after_position - before_position
         )
 
-        image = interpolate(before_value, after_value, remainder_value)
+        image = before_value * (1 - remainder_value) + after_value * remainder_value
         result.append(image)
 
     return np.array(result, dtype=dtype)
