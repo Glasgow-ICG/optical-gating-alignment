@@ -74,20 +74,51 @@ def test_drift_correction_uint16():
 def test_linear_interpolation_uint8():
     # create a rectangular uint8 'image' sequence
     sequence = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint8")
+    print(sequence[:, 0, 0])
 
     accurate = []
-    for interp_pos in np.arange(0.5, len(sequence) - 0.5, 1):
+    for interp_pos in np.arange(0.5, len(sequence) - 1, 0.5):
         interpolated_value = hlp.linear_interpolation(
             sequence, interp_pos, period=None
         )[0, 0]
         # astype('int') is needed to prevent wrapping
-        known_value = int(
-            (
-                sequence[int(interp_pos), 0, 0].astype("int")
-                + sequence[int(interp_pos + 1), 0, 0].astype("int")
+        if interp_pos // 1 == interp_pos:
+            known_value = sequence[int(interp_pos), 0, 0]
+        else:
+            known_value = int(
+                (
+                    sequence[int(interp_pos), 0, 0].astype("int")
+                    + sequence[int(interp_pos + 1), 0, 0].astype("int")
+                )
+                / 2
             )
-            / 2
-        )
+        print(interp_pos, interpolated_value, known_value)
+        accurate.append(interpolated_value == known_value)
+
+    assert np.all(accurate)
+
+
+def test_linear_interpolation_uint16():
+    # create a rectangular uint16 'image' sequence
+    sequence = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint16")
+
+    accurate = []
+    for interp_pos in np.arange(0.5, len(sequence) - 1, 0.5):
+        interpolated_value = hlp.linear_interpolation(
+            sequence, interp_pos, period=None
+        )[0, 0]
+        # astype('int') is needed to prevent wrapping
+        if interp_pos // 1 == interp_pos:
+            known_value = sequence[int(interp_pos), 0, 0]
+        else:
+            known_value = int(
+                (
+                    sequence[int(interp_pos), 0, 0].astype("int")
+                    + sequence[int(interp_pos + 1), 0, 0].astype("int")
+                )
+                / 2
+            )
+        print(interp_pos, interpolated_value, known_value)
         accurate.append(interpolated_value == known_value)
 
     assert np.all(accurate)
