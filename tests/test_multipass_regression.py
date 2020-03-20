@@ -68,7 +68,7 @@ def test_solve_with_maximum_range():
         else:
             previous_shifts = self_consistent_shifts.copy()
             accurate.append(
-                np.all(np.abs(self_consistent_shifts - previous_shifts) < 1e6)
+                np.all(np.abs(self_consistent_shifts - previous_shifts) < 1e-6)
             )
 
     assert np.all(accurate)

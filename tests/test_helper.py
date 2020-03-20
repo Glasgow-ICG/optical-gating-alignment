@@ -1,5 +1,8 @@
 import optical_gating_alignment.helper as hlp
 import numpy as np
+from scipy import interpolate
+
+# TODO: check float outputs from interp
 
 
 def toy_sequence(length=0, seq_type="image", knowledge_type="random", dtype="uint8"):
@@ -103,7 +106,7 @@ def test_interpolate_image_sequence_uint8_period():
     for resample_factor in np.arange(1, 5):
         # resample
         resampled_sequence = hlp.interpolate_image_sequence(
-            sequence, current_period, resample_factor
+            sequence, current_period, interpolation_factor=resample_factor
         )
 
         accurate.append(
@@ -192,7 +195,7 @@ def test_interpolate_image_sequence_uint16_1():
     assert np.all(resampled_sequence == sequence)
 
 
-def test_interpolate_image_sequence_uint8_known():
+def test_interpolate_image_sequence_uint8_known_uint8():
     # assumes the code was correct at the time this test was made
     # create a rectangular uint8 'image' sequence with known values
     sequence = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint8")
@@ -200,7 +203,9 @@ def test_interpolate_image_sequence_uint8_known():
     period = 8
 
     # resample to 80
-    resampled_sequence = hlp.interpolate_image_sequence(sequence, period, 80 / period)
+    resampled_sequence = hlp.interpolate_image_sequence(
+        sequence, period, 80 / period, dtype="uint8"
+    )
 
     # this was very manual
     expected = [
@@ -293,7 +298,7 @@ def test_interpolate_image_sequence_uint8_known():
     )
 
 
-def test_interpolate_image_sequence_uint16_known():
+def test_interpolate_image_sequence_uint16_known_uint16():
     # assumes the code was correct at the time this test was made
     # create a rectangular uint16 'image' sequence with known values
     sequence = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint16")
@@ -301,7 +306,9 @@ def test_interpolate_image_sequence_uint16_known():
     period = 8
 
     # resample to 80
-    resampled_sequence = hlp.interpolate_image_sequence(sequence, period, 80 / period)
+    resampled_sequence = hlp.interpolate_image_sequence(
+        sequence, period, 80 / period, dtype="uint16"
+    )
 
     # this was very manual
     expected = [
@@ -387,7 +394,111 @@ def test_interpolate_image_sequence_uint16_known():
         2,
     ]
 
+    print(sequence[:, 1, 1], resampled_sequence[:, 1, 1])
     assert (
         np.all(expected == resampled_sequence[:, 1, 1])
         and resampled_sequence.dtype == np.uint16
+    )
+
+
+def test_interpolate_image_sequence_uint8_known_float():
+    # assumes the code was correct at the time this test was made
+    # create a rectangular uint8 'image' sequence with known values
+    sequence = toy_sequence(seq_type="image", knowledge_type="known", dtype="uint8")
+    # use integer period
+    period = 8
+
+    # resample to 80
+    resampled_sequence = hlp.interpolate_image_sequence(
+        sequence, period, 80 / period, dtype="float"
+    )
+
+    # this was very manual
+    expected = [
+        1.0,
+        1.2,
+        1.4,
+        1.6,
+        1.8,
+        2.0,
+        2.2,
+        2.4,
+        2.6,
+        2.8,
+        3.0,
+        4.2,
+        5.4,
+        6.6,
+        7.8,
+        9.0,
+        10.2,
+        11.4,
+        12.6,
+        13.8,
+        15.0,
+        19.8,
+        24.6,
+        29.4,
+        34.2,
+        39.0,
+        43.8,
+        48.6,
+        53.4,
+        58.2,
+        63.0,
+        82.2,
+        101.4,
+        120.6,
+        139.8,
+        159.0,
+        178.2,
+        197.4,
+        216.6,
+        235.8,
+        255.0,
+        235.9,
+        216.8,
+        197.7,
+        178.6,
+        159.5,
+        140.4,
+        121.3,
+        102.2,
+        83.1,
+        64.0,
+        59.2,
+        54.4,
+        49.6,
+        44.8,
+        40.0,
+        35.2,
+        30.4,
+        25.6,
+        20.8,
+        16.0,
+        14.8,
+        13.6,
+        12.4,
+        11.2,
+        10.0,
+        8.8,
+        7.6,
+        6.4,
+        5.2,
+        4.0,
+        3.8,
+        3.6,
+        3.4,
+        3.2,
+        3.0,
+        2.8,
+        2.6,
+        2.4,
+        2.2,
+    ]
+
+    print(sequence[:, 1, 1], resampled_sequence[:, 1, 1])
+    assert (
+        np.all(np.abs(expected - resampled_sequence[:, 1, 1]) <= 1e-6)
+        and resampled_sequence.dtype == np.float
     )

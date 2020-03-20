@@ -37,7 +37,7 @@ def test_get_roll_factor_at():
     accurate = []
     for roll in np.arange(len(alignment1) + 1):
         # shift alignment
-        alignment2 = np.roll(alignment1, roll)
+        alignment2 = np.roll(alignment1, roll, axis=0)
 
         for phase1 in np.arange(0, len(alignment1), 0.5):
             # get roll factor
@@ -58,7 +58,7 @@ def test_get_roll_factor_at_wrap1():
     accurate = []
     for roll in np.arange(len(alignment1) + 1):
         # shift alignment
-        alignment2 = np.roll(alignment1, roll)
+        alignment2 = np.roll(alignment1, roll, axis=0)
 
         # get roll factor
         roll_factor = cnw.get_roll_factor_at(alignment1, alignment2, 0)
@@ -72,13 +72,13 @@ def test_get_roll_factor_at_wrap1():
 def test_get_roll_factor_at_wrap2():
     # toy alignment data
     alignment1 = toy_sequence(seq_type="alignment")
-    alignment1 = np.roll(alignment1, -2)
+    alignment1 = np.roll(alignment1, -2, axis=0)
     # the roll -2 makes there be a wrap point 2 for a period-0.5 phase
 
     accurate = []
     for roll in np.arange(len(alignment1) + 1):
         # shift alignment
-        alignment2 = np.roll(alignment1, roll)
+        alignment2 = np.roll(alignment1, roll, axis=0)
 
         # get roll factor
         roll_factor = cnw.get_roll_factor_at(
@@ -347,7 +347,7 @@ def test_wrap_and_roll_gapless():
     accurate = []
     for roll in np.arange(period1 + 1):
         alignment1 = cnw.wrap_and_roll(alignment1Wrapped, period1, roll)
-        alignment2 = np.roll(alignment1Wrapped, roll)
+        alignment2 = np.roll(alignment1Wrapped, roll, axis=0)
         accurate.append(np.all(alignment1 == alignment2))
 
     assert np.all(accurate)
@@ -365,7 +365,7 @@ def test_wrap_and_roll_gapped():
         for roll in np.arange(period1 + 1):
             alignment1 = cnw.wrap_and_roll(alignment1Gapped, period1, roll)
             alignment1 = alignment1[alignment1 >= 0]
-            alignment2 = np.roll(alignment1Wrapped, roll)
+            alignment2 = np.roll(alignment1Wrapped, roll, axis=0)
             print(alignment1Gapped, alignment1, alignment2)
             accurate.append(np.all(alignment1 == alignment2))
 
@@ -385,7 +385,7 @@ def test_wrap_and_roll_doublegapped():
         for roll in np.arange(period1 + 1):
             alignment1 = cnw.wrap_and_roll(alignment1Gapped, period1, roll)
             alignment1 = alignment1[alignment1 >= 0]
-            alignment2 = np.roll(alignment1Wrapped, roll)
+            alignment2 = np.roll(alignment1Wrapped, roll, axis=0)
             print(alignment1Gapped, alignment1, alignment2)
             accurate.append(np.all(alignment1 == alignment2))
 
@@ -420,6 +420,7 @@ def test_cascading_needleman_wunsch_self_uint8():
     assert np.all(accurate)
 
 
+# TODO get 16 bit working with jps
 # def test_cascading_needleman_wunsch_self_uint16():
 #     # toy image sequences
 #     sequence1 = toy_sequence(
@@ -448,6 +449,7 @@ def test_cascading_needleman_wunsch_self_uint8():
 #     assert np.all(accurate)
 
 
+# TODO get interp working
 # def test_cascading_needleman_wunsch_self_interp_uint8():
 #     # toy image sequences
 #     sequence1 = toy_sequence(

@@ -5,10 +5,12 @@ for drift by taking the common window of two sequences."""
 import numpy as np
 
 
-def linear_interpolation(sequence, float_position, period=None):
+def linear_interpolation(sequence, float_position, period=None, dtype=None):
     """A linear interpolation function for a 'sequence' of ND items
-    Note: this is, currently, only for uint8 images.
+    Note: this is, currently, only for uint8 images. Why?
     """
+    if dtype is None:
+        dtype = sequence.dtype
     if period is None:
         period = len(sequence)
 
@@ -37,14 +39,18 @@ def linear_interpolation(sequence, float_position, period=None):
 
         interpolated_value = lower_value * (1 - remainder) + upper_value * remainder
 
-    interpolated_value_int = interpolated_value.astype(sequence.dtype)
+    interpolated_value_int = interpolated_value.astype(dtype)
 
     return interpolated_value_int
 
 
-def interpolate_image_sequence(sequence, period, interpolation_factor=1):
+def Interpolate(a, b, frac):
+    return a * (1 - frac) + b * frac
+
+
+def interpolate_image_sequence(sequence, period, interpolation_factor=1, dtype=None):
     """Interpolate a series of images along a 'time' axis.
-    Note: this is, currently, only for uint8 images
+    Note: this is, currently, only for uint8 images. Why?
 
     Inputs:
     * series: a PxMxN numpy array contain P images of size MxN
@@ -56,6 +62,8 @@ def interpolate_image_sequence(sequence, period, interpolation_factor=1):
     * interpolated_sequence: a P'xMxN numpy array
       * Contains np.ceil(interpolation_factor*period) frames, i.e. P' < =interpolation_factor*P
     """
+    if dtype == None:
+        dtype = sequence.dtype
 
     # Original coordinates
     (_, m, n) = sequence.shape
@@ -65,18 +73,31 @@ def interpolate_image_sequence(sequence, period, interpolation_factor=1):
     p_out = len(p_indices_out)
 
     # Sample at interpolated coordinates
-    # DEVNOTE: The boundary condition is dealt with simplistically
-    # ... but it works.
-    interpolated_sequence = np.zeros((p_out, m, n), dtype=sequence.dtype)
-    for i in np.arange(p_indices_out.shape[0]):
-        if p_indices_out[i] + 1 > len(sequence):  # boundary condition
-            interpolated_sequence[i, ...] = sequence[-1]
-        else:
-            interpolated_sequence[i, ...] = linear_interpolation(
-                sequence, p_indices_out[i]
-            )
+    # # DEVNOTE: The boundary condition is dealt with simplistically
+    # # ... but it works.
+    # interpolated_sequence = np.zeros((p_out, m, n), dtype=dtype)
+    # for i in np.arange(p_indices_out.shape[0]):
+    #     if p_indices_out[i] + 1 > len(sequence):  # boundary condition
+    #         interpolated_sequence[i, ...] = sequence[-1]
+    #     else:
+    #         interpolated_sequence[i, ...] = linear_interpolation(
+    #             sequence, p_indices_out[i], period=period, dtype=dtype
+    #         )
 
-    return interpolated_sequence
+    # stolen from JT - see if this is better with boundaries
+    result = []
+    for i in np.arange(period * interpolation_factor):
+        desiredPos = (i / float(period * interpolation_factor)) * period
+        beforePos = int(desiredPos)
+        afterPos = beforePos + 1
+        before = sequence[beforePos]
+        after = sequence[afterPos % len(sequence)]
+        remainder = (desiredPos - beforePos) / float(afterPos - beforePos)
+
+        image = Interpolate(before, after, remainder)
+        result.append(image)
+
+    return np.array(result, dtype=dtype)
 
 
 def drift_correction(sequence1, sequence2, drift):
