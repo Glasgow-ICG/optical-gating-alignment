@@ -23,7 +23,7 @@ def interpolate_image_sequence(sequence, period, interpolation_factor=1, dtype=N
     * interpolated_sequence: a P'xMxN numpy array
       * Contains np.ceil(interpolation_factor*period) frames, i.e. P' < =interpolation_factor*P
     """
-    if dtype == None:
+    if dtype is None:
         dtype = sequence.dtype
 
     result = []
