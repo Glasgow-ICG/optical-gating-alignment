@@ -66,8 +66,7 @@ def process_sequence(
     * drift_history: updated list of the drifts for sequence_history
       * if no drift correction is used, this is a dummy variable
     * shift_history: updated list of shifts calculated for sequence_history
-    * global_solution[-1]: roll factor for latest reference frames
-    * residuals: residuals on least squares solution"""
+    * global_solution[-1]: roll factor for latest reference frames"""
 
     # Deal with this_sequence type - mostly legacy
     if type(this_sequence) is list:
