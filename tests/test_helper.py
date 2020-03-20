@@ -1,6 +1,6 @@
 import optical_gating_alignment.helper as hlp
 import numpy as np
-from scipy import interpolate
+
 
 # TODO: check float outputs from interp
 
