@@ -2,7 +2,6 @@
 Uses a cascading form of the Needleman Wunsch algorithm.
 This module includes all necessary functions."""
 
-import optical_gating_alignment.helper as hlp
 import numpy as np
 from loguru import logger
 import j_py_sad_correlation as jps
@@ -970,7 +969,7 @@ def cascading_needleman_wunsch(
     traceback_matrix = cascades[:, :, roll_factor]
     sequence = np.roll(sequence, roll_factor, axis=0)
     logger.debug("Cascades scores {0}", cascades[-1, -1, :])
-    logger.info("Chose cascade {0} of {1}:", roll_factor+1, len(sequence))
+    logger.info("Chose cascade {0} of {1}:", roll_factor + 1, len(sequence))
     logger.debug("Cascaded traceback matrixes:")
     logger.debug(traceback_matrix)
     logger.debug(

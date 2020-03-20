@@ -1,4 +1,3 @@
-import optical_gating_alignment.cross_correlation as cc
 import optical_gating_alignment.optical_gating_alignment as oga
 import tests.test_helper as hlp
 import numpy as np
