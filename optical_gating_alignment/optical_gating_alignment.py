@@ -232,7 +232,7 @@ def process_sequence(
                         logger.debug("Get target: Not ref_seq_id; no drift and cnw.")
                         (
                             alignment1,
-                            alignment2,
+                            _,
                             target,
                             score,
                         ) = cnw.cascading_needleman_wunsch(
