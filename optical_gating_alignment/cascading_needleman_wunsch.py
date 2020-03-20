@@ -304,7 +304,6 @@ def get_roll_factor_at(alignment1, alignment2, phase1):
                 (alignment1[upper_bound % length1] - alignment1[lower_bound]),
             )
         else:
-            pass
             logger.critical("I don't think this should ever be reached!")
 
         idxPos = (interpolated_index1 * (upper_bound - lower_bound)) + lower_bound
@@ -587,7 +586,6 @@ def get_roll_factor_at(alignment1, alignment2, phase1):
                 alignment2[alignment2_lower_bound],
             )
         else:
-            pass
             logger.critical("I don't think this should ever be reached!")
 
         interpolated_index2 = (idxPos - alignment2_lower_bound) / (
