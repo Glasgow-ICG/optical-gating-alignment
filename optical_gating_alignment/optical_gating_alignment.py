@@ -195,12 +195,7 @@ def process_sequence(
                     seq1, seq2 = hlp.drift_correction(
                         sequence_history[i], sequence_history[-1], this_drift
                     )
-                    (
-                        alignment1,
-                        alignment2,
-                        roll_factor,
-                        score,
-                    ) = cc.rolling_cross_correlation(
+                    (alignment1, _, roll_factor, score,) = cc.rolling_cross_correlation(
                         seq1,
                         seq2,
                         resampled_period,
