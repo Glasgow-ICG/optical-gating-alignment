@@ -126,7 +126,6 @@ def process_sequence(
                 shift_history,
                 -1000,
                 None,
-                None,
             )
     # And that shape is compatible with the history that we already have
     if len(sequence_history) > 1:
@@ -146,7 +145,6 @@ def process_sequence(
                 drift_history,
                 shift_history,
                 -2000,
-                None,
                 None,
             )
 
@@ -240,12 +238,7 @@ def process_sequence(
                 else:
                     if this_drift is None:
                         logger.debug("Get target: Not ref_seq_id; no drift and cnw.")
-                        (
-                            alignment1,
-                            _,
-                            target,
-                            score,
-                        ) = cnw.cascading_needleman_wunsch(
+                        (alignment1, _, target, _,) = cnw.cascading_needleman_wunsch(
                             sequence_history[ref_seq_id],
                             sequence_history[i],
                             period_history[ref_seq_id],
@@ -267,7 +260,7 @@ def process_sequence(
                             alignment1,
                             alignment2,
                             target,
-                            score,
+                            _,
                         ) = cnw.cascading_needleman_wunsch(
                             seq1,
                             seq2,
@@ -283,7 +276,7 @@ def process_sequence(
                         alignment1,
                         alignment2,
                         roll_factor,
-                        score,
+                        _,
                     ) = cnw.cascading_needleman_wunsch(
                         sequence_history[i],
                         sequence_history[-1],
@@ -302,7 +295,7 @@ def process_sequence(
                         alignment1,
                         alignment2,
                         roll_factor,
-                        score,
+                        _,
                     ) = cnw.cascading_needleman_wunsch(
                         seq1,
                         seq2,
@@ -320,7 +313,7 @@ def process_sequence(
                 )
                 shift_history.append(
                     (i, len(sequence_history) - 1, roll_factor % period_history[-1], 1)
-                )  # add score here
+                )  # TODO add score here?
 
     logger.debug("Printing shifts:")
     logger.debug(shift_history)
@@ -343,13 +336,11 @@ def process_sequence(
 
     logger.info("Reference Frame rolling by: {0}", global_solution[-1])
 
-    # Catch for outputs on first period
-    if len(sequence_history) == 1:
-        score = 0
-        alignment1 = []
-
     # Count indels in last returned alignment
-    indels = np.sum(alignment1 == -1)
+    if len(sequence_history) == 1:
+        indels = 0
+    else:
+        indels = np.sum(alignment1 == -1)
 
     if algorithm == "cc":
         global_roll_factor = (
@@ -366,86 +357,5 @@ def process_sequence(
         drift_history,
         shift_history,
         global_roll_factor,
-        score,
         indels,
     )
-
-
-# if __name__ == "__main__":
-#     logger.enable("optical-gating-alignment")
-#     logger.warning("This test is still broken.")
-#     numStacks = 10
-#     stackLength = 10
-#     width = 10
-#     height = 10
-
-#     sequence_historyDrift = []
-#     periodHistoryDrift = []
-#     shiftsDrift = []
-#     driftHistoryDrift = []
-
-#     sequence_history = []
-#     periodHistory = []
-#     shifts = []
-#     driftHistory = []
-
-#     for i in range(numStacks):
-#         logger.info("Running for stack {0}", i)
-#         # Make new toy sequence
-#         thisPeriod = stackLength - 0.5
-#         seq1 = (
-#             np.arange(stackLength) + np.random.randint(0, stackLength + 1)
-#         ) % thisPeriod
-#         logger.info("New Sequence: {0}; Period: {1} ({2})", seq1, thisPeriod, len(seq1))
-#         seq2 = np.asarray(seq1, "uint8").reshape([len(seq1), 1, 1])
-#         seq2 = np.repeat(np.repeat(seq2, width, 1), height, 2)
-
-#         # Run MCC without Drift
-#         (
-#             sequence_history,
-#             periodHistory,
-#             driftHistory,
-#             shifts,
-#             roll_factor,
-#             score,
-#             indels,
-#         ) = process_sequence(
-#             seq2,
-#             thisPeriod,
-#             None,
-#             sequence_history,
-#             periodHistory,
-#             driftHistory,
-#             shifts,
-#             ref_seq_phase=0,
-#             resampled_period=80,
-#             max_offset=3,
-#         )
-
-#         # Outputs for toy examples
-#         seqOut = (seq1 + roll_factor) % thisPeriod
-#         logger.info("Aligned Sequence (wout Drift): {0}", seqOut)
-
-#         # Run MCC with Drift of [0,0]
-#         (
-#             sequence_historyDrift,
-#             periodHistoryDrift,
-#             driftHistoryDrift,
-#             shiftsDrift,
-#             roll_factor,
-#         ) = process_sequence(
-#             seq2,
-#             thisPeriod,
-#             [0, 0],
-#             sequence_historyDrift,
-#             periodHistoryDrift,
-#             driftHistoryDrift,
-#             shiftsDrift,
-#             ref_seq_phase=0,
-#             resampled_period=80,
-#             max_offset=3,
-#         )
-
-#         # Outputs for toy examples
-#         seqOut = (seq1 + roll_factor) % thisPeriod
-#         logger.info("Aligned Sequence (with Drift): {0}", seqOut)
