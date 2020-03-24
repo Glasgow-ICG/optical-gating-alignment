@@ -1,10 +1,12 @@
 **/local-data/**
 
+# Caches
+**/.ipynb_checkpoints/**
 *.pyc
-**/__pycache__/
+**/__pycache__/**
 
 # Packages
-/dist/*
+**/dist/**
 
 # Unit test / coverage reports
 .coverage
