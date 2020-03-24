@@ -1,13 +1,13 @@
 import optical_gating_alignment.cascading_needleman_wunsch as cnw
 import numpy as np
 import j_py_sad_correlation as jps
-from tests.test_helper import toy_sequence
+import test_helper as hlp
 
 
 def test_get_roll_factor_at_list():
     # to test that the function correctly handles ilists (when given)
     # toy alignment data
-    alignment1 = list(toy_sequence(seq_type="alignment"))
+    alignment1 = list(hlp.toy_sequence(seq_type="alignment"))
 
     assert cnw.get_roll_factor_at(alignment1, alignment1, 0) == 0
 
@@ -15,7 +15,7 @@ def test_get_roll_factor_at_list():
 def test_get_roll_factor_at_lower_gap():
     # to test that the function correctly handles gaps in the lower bound
     # toy alignment data
-    alignment1 = list(toy_sequence(seq_type="alignment"))
+    alignment1 = list(hlp.toy_sequence(seq_type="alignment"))
     alignment1.insert(2, -1)
 
     assert cnw.get_roll_factor_at(alignment1, alignment1, 1.5) == 0
@@ -24,7 +24,7 @@ def test_get_roll_factor_at_lower_gap():
 def test_get_roll_factor_at_upper_gap():
     # to test that the function correctly handles gaps in the upper bound
     # toy alignment data
-    alignment1 = list(toy_sequence(seq_type="alignment"))
+    alignment1 = list(hlp.toy_sequence(seq_type="alignment"))
     alignment1.insert(3, -1)
 
     assert cnw.get_roll_factor_at(alignment1, alignment1, 1.5) == 0
@@ -32,7 +32,7 @@ def test_get_roll_factor_at_upper_gap():
 
 def test_get_roll_factor_at():
     # toy alignment data
-    alignment1 = toy_sequence(seq_type="alignment")
+    alignment1 = hlp.toy_sequence(seq_type="alignment")
 
     accurate = []
     for roll in np.arange(len(alignment1) + 1):
@@ -52,7 +52,7 @@ def test_get_roll_factor_at():
 
 def test_get_roll_factor_at_wrap1():
     # toy alignment data
-    alignment1 = toy_sequence(seq_type="alignment") + 1
+    alignment1 = hlp.toy_sequence(seq_type="alignment") + 1
     # the +1 makes a phase of 0 be at the wrap1 point
 
     accurate = []
@@ -71,7 +71,7 @@ def test_get_roll_factor_at_wrap1():
 
 def test_get_roll_factor_at_wrap2():
     # toy alignment data
-    alignment1 = toy_sequence(seq_type="alignment")
+    alignment1 = hlp.toy_sequence(seq_type="alignment")
     alignment1 = np.roll(alignment1, -2, axis=0)
     # the roll -2 makes there be a wrap point 2 for a period-0.5 phase
 
@@ -96,7 +96,7 @@ def test_get_roll_factor_at_wrap2():
 def test_fill_traceback_matrix_self_uint8():
     # assumes the code was correct at the time this test was made
     # toy image sequences
-    sequence1 = toy_sequence(seq_type="image", knowledge_type="tiny", dtype="uint8")
+    sequence1 = hlp.toy_sequence(seq_type="image", knowledge_type="tiny", dtype="uint8")
 
     # score matrix
     score_matrix = jps.sad_grid(sequence1, sequence1)
@@ -119,7 +119,7 @@ def test_fill_traceback_matrix_self_uint8():
 # def test_fill_traceback_matrix_self_uint16():
 #     # assumes the code was correct at the time this test was made
 #     # toy image sequences
-#     sequence1 = toy_sequence(seq_type="image", knowledge_type="tiny", dtype="uint16")
+#     sequence1 = hlp.toy_sequence(seq_type="image", knowledge_type="tiny", dtype="uint16")
 
 #     # score matrix
 #     score_matrix = jps.sad_grid(sequence1, sequence1)
@@ -141,7 +141,7 @@ def test_fill_traceback_matrix_self_uint8():
 
 def test_traverse_traceback_matrix_list():
     # toy image sequences
-    sequence1 = toy_sequence(
+    sequence1 = hlp.toy_sequence(
         length=10, seq_type="image", knowledge_type="random", dtype="uint8"
     )
 
@@ -165,7 +165,7 @@ def test_traverse_traceback_matrix_list():
 
 def test_traverse_traceback_matrix_self_uint8():
     # toy image sequences
-    sequence1 = toy_sequence(
+    sequence1 = hlp.toy_sequence(
         length=10, seq_type="image", knowledge_type="random", dtype="uint8"
     )
 
@@ -194,7 +194,7 @@ def test_traverse_traceback_matrix_self_uint8():
 
 # def test_traverse_traceback_matrix_self_uint16():
 #     # toy image sequences
-#     sequence1 = toy_sequence(
+#     sequence1 = hlp.toy_sequence(
 #         length=10, seq_type="image", knowledge_type="random", dtype="uint16"
 #     )
 
@@ -224,7 +224,7 @@ def test_traverse_traceback_matrix_self_uint8():
 def test_construct_cascade_self_uint8():
     # assumes the code was correct at the time this test was made
     # toy image sequences
-    sequence1 = toy_sequence(
+    sequence1 = hlp.toy_sequence(
         length=10, seq_type="image", knowledge_type="known", dtype="uint8"
     )
 
@@ -254,7 +254,7 @@ def test_construct_cascade_self_uint8():
 # def test_construct_cascade_self_uint16():
 #     # assumes the code was correct at the time this test was made
 #     # toy image sequences
-#     sequence1 = toy_sequence(
+#     sequence1 = hlp.toy_sequence(
 #         length=10, seq_type="image", knowledge_type="known", dtype="uint16"
 #     )
 
@@ -281,7 +281,7 @@ def test_construct_cascade_self_uint8():
 
 def test_wrap_and_roll_gapless():
     # this test uses a gapless sequence, therefore should be equivalent to np.roll
-    alignment1Wrapped = toy_sequence(seq_type="alignment")
+    alignment1Wrapped = hlp.toy_sequence(seq_type="alignment")
     period1 = 10  # use integer
 
     accurate = []
@@ -296,7 +296,7 @@ def test_wrap_and_roll_gapless():
 def test_wrap_and_roll_gapped():
     # this test uses a gapped sequence
     # but removes the gaps before comparing to np.roll
-    alignment1Wrapped = toy_sequence(seq_type="alignment")
+    alignment1Wrapped = hlp.toy_sequence(seq_type="alignment")
     period1 = 10  # use integer
 
     accurate = []
@@ -315,7 +315,7 @@ def test_wrap_and_roll_gapped():
 def test_wrap_and_roll_doublegapped():
     # this test uses a double gapped sequence
     # but removes the gaps before comparing to np.roll
-    alignment1Wrapped = toy_sequence(seq_type="alignment")
+    alignment1Wrapped = hlp.toy_sequence(seq_type="alignment")
     period1 = 10  # use integer
 
     accurate = []
@@ -334,7 +334,7 @@ def test_wrap_and_roll_doublegapped():
 
 def test_cascading_needleman_wunsch_self_uint8():
     # toy image sequences
-    sequence1 = toy_sequence(
+    sequence1 = hlp.toy_sequence(
         length=10, seq_type="image", knowledge_type="known", dtype="uint8"
     )
 
@@ -363,7 +363,7 @@ def test_cascading_needleman_wunsch_self_uint8():
 # TODO get 16 bit working with jps
 # def test_cascading_needleman_wunsch_self_uint16():
 #     # toy image sequences
-#     sequence1 = toy_sequence(
+#     sequence1 = hlp.toy_sequence(
 #         length=10, seq_type="image", knowledge_type="known", dtype="uint16"
 #     )
 
@@ -392,7 +392,7 @@ def test_cascading_needleman_wunsch_self_uint8():
 # TODO get interp working
 # def test_cascading_needleman_wunsch_self_interp_uint8():
 #     # toy image sequences
-#     sequence1 = toy_sequence(
+#     sequence1 = hlp.toy_sequence(
 #         length=10, seq_type="image", knowledge_type="known", dtype="uint8"
 #     )
 
@@ -427,7 +427,7 @@ def test_cascading_needleman_wunsch_self_uint8():
 # def test_cascading_needleman_wunsch_self_interp_uint16():
 #     # this test could do with being more robust - but that might presume the current code is correct
 #     # toy image sequences
-#     sequence1 = toy_sequence(
+#     sequence1 = hlp.toy_sequence(
 #         length=10, seq_type="image", knowledge_type="known", dtype="uint16"
 #     )
 #     period1 = len(sequence1)  # use integer

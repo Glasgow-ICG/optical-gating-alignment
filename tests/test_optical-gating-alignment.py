@@ -1,5 +1,5 @@
 import optical_gating_alignment.optical_gating_alignment as oga
-import tests.test_helper as hlp
+import test_helper as hlp
 import numpy as np
 
 
