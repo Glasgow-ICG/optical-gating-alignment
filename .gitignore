@@ -1,5 +1,15 @@
 **/local-data/**
-**/__pycache__/
+
 *.pyc
-coverage.xml
+**/__pycache__/
+
+# Packages
+/dist/*
+
+# Unit test / coverage reports
 .coverage
+coverage.xml
+.tox
+.pytest_cache
+
+.DS_Store
