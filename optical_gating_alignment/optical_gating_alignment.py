@@ -12,7 +12,7 @@ from . import cascading_needleman_wunsch as cnw
 from . import multipass_regression as mr
 
 # Set-up logger
-logger.disable("optical-gating-alignment")
+logger.disable("optical_gating_alignment")
 
 
 def process_sequence(

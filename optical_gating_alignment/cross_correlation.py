@@ -6,7 +6,7 @@ from . import helper as hlp
 import j_py_sad_correlation as jps
 
 # Set-up logger
-logger.disable("optical-gating-alignment")
+logger.disable("optical_gating_alignment")
 
 
 def cross_correlation(sequence1, sequence2, method=None):

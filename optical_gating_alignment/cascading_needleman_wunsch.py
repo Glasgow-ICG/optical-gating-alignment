@@ -7,7 +7,7 @@ from loguru import logger
 import j_py_sad_correlation as jps
 
 # Set-up logger
-logger.disable("optical-gating-alignment")
+logger.disable("optical_gating_alignment")
 
 
 def get_roll_factor_at(alignment1, alignment2, phase1):

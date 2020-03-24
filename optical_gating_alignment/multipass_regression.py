@@ -4,7 +4,7 @@ import numpy as np
 from loguru import logger
 
 # Set-up logger
-logger.disable("optical-gating-alignment")
+logger.disable("optical_gating_alignment")
 
 # Written by Jonathan Taylor, University of Glasgow
 # jonathan.taylor@glasgow.ac.uk
