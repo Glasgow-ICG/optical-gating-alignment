@@ -6,10 +6,10 @@ between sequences."""
 
 import numpy as np
 from loguru import logger
-import optical_gating_alignment.helper as hlp
-import optical_gating_alignment.cross_correlation as cc
-import optical_gating_alignment.cascading_needleman_wunsch as cnw
-import optical_gating_alignment.multipass_regression as mr
+from . import helper as hlp
+from . import cross_correlation as cc
+from . import cascading_needleman_wunsch as cnw
+from . import multipass_regression as mr
 
 # Set-up logger
 logger.disable("optical-gating-alignment")

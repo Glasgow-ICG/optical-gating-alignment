@@ -2,7 +2,7 @@
 
 import numpy as np
 from loguru import logger
-import optical_gating_alignment.helper as hlp
+from . import helper as hlp
 import j_py_sad_correlation as jps
 
 # Set-up logger
