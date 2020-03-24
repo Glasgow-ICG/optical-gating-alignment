@@ -23,14 +23,9 @@ def process_sequence(
     period_history=None,
     drift_history=None,
     shift_history=None,
+    max_offset = 3,
     algorithm="cnw",
-    method="fft",
-    max_offset=3,
-    resampled_period=None,
-    ref_seq_id=0,
-    ref_seq_phase=0,
-    interpolation_factor=None,
-    gap_penalty=0,
+    **kwargs
 ):
     """ Process a new reference sequence.
     Requires the historical information to be passed by the user.
@@ -48,10 +43,10 @@ def process_sequence(
       * if no drift correction is used, this is a dummy variable
     * shift_history: previously calculated relative shifts between
                      sequence_history
+    * max_offset: how far apart historically to make comparisons
     * for 'cc' algorithm:
     * method
     * resampled_period: the number of frames to use for resampled sequences
-    * max_offset: how far apart historically to make comparisons
       * should be used to prevent comparing sequences that are far apart
         and have little similarity
     * for 'cnw' alorithm:
@@ -71,6 +66,16 @@ def process_sequence(
     # Deal with this_sequence type - mostly legacy
     if type(this_sequence) is list:
         this_sequence = np.vstack(this_sequence)
+
+    logger.debug("Parsing algorithm-specific options ({0}):".format(algorithm))
+    if algorithm=="cc":
+        options = kwargs.keys()
+        method = (kwargs["method"] if "method" in options else None)
+        resampled_period = (kwargs["resampled_period"] if "resampled_period" in options else None)
+    elif algorithm="cnw":
+        ref_seq_id = (kwargs["ref_seq_id"] if "ref_seq_id" in options else 0)
+        ref_seq_phase = (kwargs["ref_seq_phase"] if "ref_seq_phase" in options else 0)
+        interpolation_factor = (kwargs["interpolation_factor"] if "interpolation_factor" in options else None)
 
     logger.info("Processing new sequence:")
     logger.info(this_sequence[:, 0, 0])

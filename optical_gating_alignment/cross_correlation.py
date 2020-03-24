@@ -9,7 +9,7 @@ import j_py_sad_correlation as jps
 logger.disable("optical-gating-alignment")
 
 
-def cross_correlation(sequence1, sequence2, method="fft"):
+def cross_correlation(sequence1, sequence2, method=None):
     """Calculates cross correlation scores for each possible relative integer timeshifts between two numpy arrays (sequences) of order TXY.
     This uses the FFT for speed but is equivalent to the sum squared differences for each timeshift.
     Note: assumes both sequences are the same length."""
@@ -29,7 +29,7 @@ def cross_correlation(sequence1, sequence2, method="fft"):
                 SSD = SSD + np.sum((frame - frame_rolled) ** 2)
             scores.append(SSD)
         scores = np.array(scores)
-    elif method == "fft":
+    elif method == "fft" or method is None:  # default
         # The following is mathematically equivalent to the SSD but in Fourier space
         # It is generally faster than just the SSD (not for small cases though)
         sequence1 = sequence1.astype("float")
