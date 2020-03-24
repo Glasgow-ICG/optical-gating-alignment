@@ -23,7 +23,7 @@ def process_sequence(
     period_history=None,
     drift_history=None,
     shift_history=None,
-    max_offset = 3,
+    max_offset=3,
     algorithm="cnw",
     **kwargs
 ):
@@ -68,14 +68,20 @@ def process_sequence(
         this_sequence = np.vstack(this_sequence)
 
     logger.debug("Parsing algorithm-specific options ({0}):".format(algorithm))
-    if algorithm=="cc":
-        options = kwargs.keys()
-        method = (kwargs["method"] if "method" in options else None)
-        resampled_period = (kwargs["resampled_period"] if "resampled_period" in options else None)
-    elif algorithm="cnw":
-        ref_seq_id = (kwargs["ref_seq_id"] if "ref_seq_id" in options else 0)
-        ref_seq_phase = (kwargs["ref_seq_phase"] if "ref_seq_phase" in options else 0)
-        interpolation_factor = (kwargs["interpolation_factor"] if "interpolation_factor" in options else None)
+    options = kwargs.keys()
+    resampled_period = (
+        kwargs["resampled_period"] if "resampled_period" in options else None
+    )
+    if algorithm == "cc":
+        method = kwargs["method"] if "method" in options else None
+    elif algorithm == "cnw":
+        ref_seq_id = kwargs["ref_seq_id"] if "ref_seq_id" in options else 0
+        ref_seq_phase = kwargs["ref_seq_phase"] if "ref_seq_phase" in options else 0
+        interpolation_factor = (
+            kwargs["interpolation_factor"]
+            if "interpolation_factor" in options
+            else None
+        )
 
     logger.info("Processing new sequence:")
     logger.info(this_sequence[:, 0, 0])
@@ -244,7 +250,6 @@ def process_sequence(
                             sequence_history[i],
                             period_history[ref_seq_id],
                             period_history[i],
-                            gap_penalty=gap_penalty,
                             interpolation_factor=interpolation_factor,
                             ref_seq_phase=ref_seq_phase,
                         )
@@ -268,7 +273,6 @@ def process_sequence(
                             seq2,
                             period_history[ref_seq_id],
                             period_history[i],
-                            gap_penalty=gap_penalty,
                             interpolation_factor=interpolation_factor,
                             ref_seq_phase=ref_seq_phase,
                         )
@@ -285,7 +289,6 @@ def process_sequence(
                         sequence_history[-1],
                         period_history[i],
                         period_history[-1],
-                        gap_penalty=gap_penalty,
                         interpolation_factor=interpolation_factor,
                         ref_seq_phase=target,
                     )
@@ -305,7 +308,6 @@ def process_sequence(
                         seq2,
                         period_history[i],
                         period_history[-1],
-                        gap_penalty=gap_penalty,
                         interpolation_factor=interpolation_factor,
                         ref_seq_phase=target,
                     )
@@ -323,13 +325,18 @@ def process_sequence(
     logger.debug("Printing shifts:")
     logger.debug(shift_history)
 
-    global_solution = mr.make_shifts_self_consistent(
-        shift_history,
-        len(sequence_history),
-        period_history,
-        ref_seq_id=ref_seq_id,
-        ref_seq_phase=ref_seq_phase,
-    )
+    if algorithm == "cc":
+        global_solution = mr.make_shifts_self_consistent(
+            shift_history, len(sequence_history), period_history,
+        )
+    elif algorithm == "cnw":
+        global_solution = mr.make_shifts_self_consistent(
+            shift_history,
+            len(sequence_history),
+            period_history,
+            ref_seq_id=ref_seq_id,
+            ref_seq_phase=ref_seq_phase,
+        )
 
     logger.debug("Solution:")
     logger.debug(global_solution)
@@ -410,7 +417,6 @@ def process_sequence(
 #             periodHistory,
 #             driftHistory,
 #             shifts,
-#             gap_penalty=0,
 #             ref_seq_phase=0,
 #             resampled_period=80,
 #             max_offset=3,
@@ -435,7 +441,6 @@ def process_sequence(
 #             periodHistoryDrift,
 #             driftHistoryDrift,
 #             shiftsDrift,
-#             gap_penalty=0,
 #             ref_seq_phase=0,
 #             resampled_period=80,
 #             max_offset=3,
