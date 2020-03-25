@@ -380,7 +380,6 @@ def test_process_sequence_cnw_nodrift_nointerp_uint8_sameperiod():
                 shift_history,
                 roll_factor,
                 _,
-                _,
             ) = oga.process_sequence(
                 this_sequence,
                 this_period,
@@ -397,7 +396,6 @@ def test_process_sequence_cnw_nodrift_nointerp_uint8_sameperiod():
                 drift_history,
                 shift_history,
                 roll_factor,
-                _,
                 _,
             ) = oga.process_sequence(
                 this_sequence,
@@ -507,7 +505,6 @@ def test_process_sequence_cnw_nodrift_nointerp_uint8_diffintperiod():
                 shift_history,
                 roll_factor,
                 _,
-                _,
             ) = oga.process_sequence(
                 this_sequence,
                 this_period,
@@ -524,7 +521,6 @@ def test_process_sequence_cnw_nodrift_nointerp_uint8_diffintperiod():
                 drift_history,
                 shift_history,
                 roll_factor,
-                _,
                 _,
             ) = oga.process_sequence(
                 this_sequence,
