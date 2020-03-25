@@ -14,8 +14,14 @@ from . import multipass_regression as mr
 
 # Set-up logger
 logger.disable("optical_gating_alignment")  # turn off the module logger (default)
-logger.remove()  # remove the default output (sys.stderr, level=DEBUG)
-logger.add(sys.stderr, level="CRITICAL")
+logger.remove(0)  # remove the default output (sys.stderr, level=DEBUG)
+
+
+def set_logger(level="CRITICAL"):
+    """Small helper to change logger level."""
+    logger.enable("optical_gating_alignment")
+    logger.remove()
+    logger.add(sys.stderr, level=level)
 
 
 def process_sequence(
@@ -75,7 +81,6 @@ def process_sequence(
     resampled_period = (
         kwargs["resampled_period"] if "resampled_period" in options else None
     )
-    log = kwargs["log"] if "log" in options else None
     if algorithm == "cc":
         method = kwargs["method"] if "method" in options else None
     elif algorithm == "cnw":
@@ -86,14 +91,6 @@ def process_sequence(
             if "interpolation_factor" in options
             else None
         )
-
-    # Set-up logger
-    if log is not None and isinstance(log, str):
-        logger.enable("optical_gating_alignment")
-        logger.remove()
-        logger.add(sys.stderr, level=log)
-    else:
-        logger.enable("optical_gating_alignment")
 
     logger.info("Processing new sequence:")
     logger.info(this_sequence[:, 0, 0])
