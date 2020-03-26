@@ -2,6 +2,9 @@ import optical_gating_alignment.cascading_needleman_wunsch as cnw
 import numpy as np
 import j_py_sad_correlation as jps
 import test_helper as hlp
+from loguru import logger
+
+logger.enable("optical_gating_alignment")
 
 
 def test_get_roll_factor_at_list():
@@ -282,7 +285,7 @@ def test_construct_cascade_self_uint8():
 def test_wrap_and_roll_gapless():
     # this test uses a gapless sequence, therefore should be equivalent to np.roll
     alignment1Wrapped = hlp.toy_sequence(seq_type="alignment")
-    period1 = 10  # use integer
+    period1 = 9  # use integer
 
     accurate = []
     for roll in np.arange(period1 + 1):
@@ -297,7 +300,7 @@ def test_wrap_and_roll_gapped():
     # this test uses a gapped sequence
     # but removes the gaps before comparing to np.roll
     alignment1Wrapped = hlp.toy_sequence(seq_type="alignment")
-    period1 = 10  # use integer
+    period1 = 9  # use integer
 
     accurate = []
     for gap in np.arange(period1 + 1):
@@ -312,11 +315,30 @@ def test_wrap_and_roll_gapped():
     assert np.all(accurate)
 
 
+def test_wrap_and_roll_gapped_nonint():
+    # this test uses a gapped sequence
+    # but removes the gaps before comparing to np.roll
+    alignment1Wrapped = hlp.toy_sequence(seq_type="alignment")
+    period1 = 9 - 0.4
+
+    accurate = []
+    for gap in np.arange(period1 + 1, dtype=int):
+        alignment1Gapped = np.insert(alignment1Wrapped, gap, -1)
+        for roll in np.arange(period1 + 1, dtype=int):
+            alignment1 = cnw.wrap_and_roll(alignment1Gapped, period1, roll)
+            alignment1 = alignment1[alignment1 >= 0]
+            alignment2 = np.roll(alignment1Wrapped, roll, axis=0)
+            print(alignment1Gapped, alignment1, alignment2)
+            accurate.append(np.all(alignment1 == alignment2))
+
+    assert np.all(accurate)
+
+
 def test_wrap_and_roll_doublegapped():
     # this test uses a double gapped sequence
     # but removes the gaps before comparing to np.roll
     alignment1Wrapped = hlp.toy_sequence(seq_type="alignment")
-    period1 = 10  # use integer
+    period1 = 9  # use integer
 
     accurate = []
     for gap in np.arange(period1 + 1):

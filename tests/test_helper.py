@@ -7,6 +7,7 @@ import numpy as np
 
 def toy_sequence(length=0, seq_type="image", knowledge_type="random", dtype="uint8"):
     if seq_type == "image":
+        # note period is length or less (10 or less for know; 5 or less for tiny)
         if knowledge_type == "random":
             sequence = np.random.randint(0, 2 ** 8, [length, 64, 128]).astype(dtype)
         elif knowledge_type == "known":
@@ -24,6 +25,7 @@ def toy_sequence(length=0, seq_type="image", knowledge_type="random", dtype="uin
             # convert to rectangular array (64x128 frame)
             sequence = np.repeat(np.repeat(sequence, 64, 1), 128, 2).astype(dtype)
     elif seq_type == "alignment":
+        # note: period is 9 or less
         sequence = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
     return sequence
 

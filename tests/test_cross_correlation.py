@@ -1,5 +1,8 @@
 import optical_gating_alignment.cross_correlation as cc
 import numpy as np
+from loguru import logger
+
+logger.enable("optical_gating_alignment")
 
 
 def toy_sequence(length=0, seq_type="image", knowledge_type="random", dtype="uint8"):

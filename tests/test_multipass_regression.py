@@ -1,5 +1,8 @@
 import optical_gating_alignment.multipass_regression as mr
 import numpy as np
+from loguru import logger
+
+logger.enable("optical_gating_alignment")
 
 
 def toy_shifts(knowledge_type="known"):

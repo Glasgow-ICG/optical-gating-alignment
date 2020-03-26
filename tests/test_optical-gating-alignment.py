@@ -1,6 +1,9 @@
 import optical_gating_alignment.optical_gating_alignment as oga
 import test_helper as hlp
 import numpy as np
+from loguru import logger
+
+logger.enable("optical_gating_alignment")
 
 
 def test_process_sequence_cc_nodrift_uint8():
