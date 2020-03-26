@@ -28,14 +28,15 @@ def solve_for_shifts(shifts, number_of_sequences, ref_seq_id, ref_seq_phase):
     M[len(shifts), ref_seq_id] = 1
     a[len(shifts)] = ref_seq_phase
     w[len(shifts)] = 1
-    logger.debug("M := {0};\ta := {1};\tw := {2};", M, a, w)
+    logger.trace("M := {0};\ta := {1};\tw := {2};", M, a, w)
 
     # This weighted least squares is from
     # !so 19624997/understanding-scipys-least-square-function-with-irls
     Mw = M * np.sqrt(w[:, np.newaxis])
     aw = a * np.sqrt(w)
-    logger.debug("Mw := {0};\taw := {1};", Mw, aw)
+    logger.trace("Mw := {0};\taw := {1};", Mw, aw)
     (self_consistent_shifts, _, _, _) = np.linalg.lstsq(Mw, aw, rcond=None)
+    logger.trace(self_consistent_shifts)
     return self_consistent_shifts
 
 
@@ -63,15 +64,21 @@ def solve_with_maximum_range(
 def adjust_shifts_to_match_solution(shifts, partial_solution, periods, warn_to=65536):
     """Now adjust the longer-distance shifts so they match our initial solution."""
 
+    logger.debug(
+        "Input: {0}, {1}, {2}, {3}".format(shifts, partial_solution, periods, warn_to)
+    )
+
     adjusted_shifts = []
-    # DEVNOTE: JT's original code has isinstance (periods, (int,long))
-    # This is Python2 syntax and not needed in Python3
+    # If only one period is passed, use it for all shifts
+    # This works well if all periods have been resampled to the same number of frames
     if isinstance(periods, int) or len(periods) == 1:
         period = periods
     for (i, j, shift, score) in shifts:
-        # (i, j, shift, score) = shifts[n]
+        # If a list of periods is provided, use the appropriate one
         if isinstance(periods, (list, np.ndarray)) and len(periods) > 1:
+            # TODO: should this be i or j?
             period = periods[i]
+        # (i, j, shift, score) = shifts[n]
         expected_wrapped_shift = (partial_solution[j] - partial_solution[i]) % period
         period_part = (
             partial_solution[j] - partial_solution[i]
@@ -119,17 +126,16 @@ def make_shifts_self_consistent(
 
     # Adjust the longer shifts to be consistent with the adjacent shift values
     # Don't warn about long-distance discrepancies, because those are fairly inevitable initially
-    adjacent_shifts = adjust_shifts_to_match_solution(
+    adjusted_shifts = adjust_shifts_to_match_solution(
         shifts, adjacent_shift_solution, period, warn_to=64
     )
 
-    logger.info("Done first stage")
+    logger.debug("Adjusted shifts: {0}", adjusted_shifts)
 
     # Now look for a solution that satisfies longer-range shifts as well.
     # If necessary, we could make a new adjustment of the shifts and repeat.
     # On a subsequent iteration we would have an improved estimate that might help us
     # decide which way to adjust long-range shifts that were initially unclear
-    adjusted_shifts = list(adjacent_shifts)
     for r in [32, 128, 512, 2048]:
         shift_solution = solve_with_maximum_range(
             adjusted_shifts, number_of_sequences, r, ref_seq_id, ref_seq_phase
