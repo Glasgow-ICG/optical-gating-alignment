@@ -714,7 +714,7 @@ def construct_cascade(score_matrix, gap_penalty=0, axis=0):
     for n in np.arange(
         score_matrix.shape[1 - axis]
     ):  # the 1-axis tricks means we loop over 0 if axis=1 and vice versa
-        logger.info("Getting score matrix for roll of {0} frames...", n)
+        logger.trace("Getting score matrix for roll of {0} frames...", n)
         cascades[:, :, n] = fill_traceback_matrix(score_matrix, gap_penalty=gap_penalty)
         score_matrix = np.roll(score_matrix, -1, axis=axis)
 
@@ -743,8 +743,8 @@ def traverse_traceback_matrix(sequence, template_sequence, traceback_matrix):
 
         x_up = x - 1
         y_left = y - 1
-        logger.debug("-----")
-        logger.debug(
+        logger.trace("-----")
+        logger.trace(
             "{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f}; ({4}->{5});",
             "curr",
             x,
@@ -753,7 +753,7 @@ def traverse_traceback_matrix(sequence, template_sequence, traceback_matrix):
             sequence[-y, 0, 0],
             template_sequence[-x, 0, 0],
         )
-        logger.debug(
+        logger.trace(
             "{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f}; ({4}->{5});",
             "diag",
             x_up,
@@ -762,7 +762,7 @@ def traverse_traceback_matrix(sequence, template_sequence, traceback_matrix):
             sequence[-y_left, 0, 0],
             template_sequence[-x_up, 0, 0],
         )
-        logger.debug(
+        logger.trace(
             "{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f}; ({4}->{5});",
             "up  ",
             x_up,
@@ -771,7 +771,7 @@ def traverse_traceback_matrix(sequence, template_sequence, traceback_matrix):
             sequence[-y, 0, 0],
             template_sequence[-x_up, 0, 0],
         )
-        logger.debug(
+        logger.trace(
             "{0}:\tx={1:d};\ty={2:d};\tssd={3:.0f}; ({4}->{5});",
             "left",
             x,
@@ -788,15 +788,16 @@ def traverse_traceback_matrix(sequence, template_sequence, traceback_matrix):
                     traceback_matrix[x, y_left],
                 ]
             else:
-                logger.info("Boundary Condition:\tI'm at the left")
+                logger.debug("Boundary Condition:\tI'm at the left")
                 options[:] = [-np.inf, traceback_matrix[x_up, y], -np.inf]
         else:
-            logger.info("Boundary Condition:\tI'm at the top")
+            logger.debug("Boundary Condition:\tI'm at the top")
             if y_left >= 0:
                 options[:] = [-np.inf, -np.inf, traceback_matrix[x, y_left]]
             else:
-                logger.warning("Boundary Condition:\tI'm at the top left")
-                logger.warning("Boundary Condition:\tI should not have got here!")
+                logger.warning(
+                    "Boundary Condition:\tI'm at the top left;\tI should not have got here!"
+                )
                 break
         direction = np.argmax(options)
 
@@ -804,20 +805,20 @@ def traverse_traceback_matrix(sequence, template_sequence, traceback_matrix):
             alignmentA.append(-1)
             alignmentB.append(x_up)
             x = x_up
-            logger.info("Direction Travelled:\tI've gone up")
+            logger.debug("Direction Travelled:\tI've gone up")
         elif direction == 0:
             alignmentA.append(y_left)
             alignmentB.append(x_up)
             x = x_up
             y = y_left
-            logger.info("Direction Travelled:\tI've gone diagonal")
+            logger.debug("Direction Travelled:\tI've gone diagonal")
         elif direction == 2:
             alignmentA.append(y_left)
             alignmentB.append(-1)
             y = y_left
-            logger.info("Direction Travelled:\tI've gone left")
+            logger.debug("Direction Travelled:\tI've gone left")
         if x == 0 and y == 0:
-            logger.info("Traversing Complete")
+            logger.success("Traversing Complete")
             traversing = False
 
     # Reverses sequence
@@ -848,8 +849,10 @@ def wrap_and_roll(alignmentAWrapped, period, roll_factor):
             indels.append(before)
     logger.debug("Unwrapped alignment with no indels: {0}", alignmentA)
     # go through the indels from end to start and insert them
+    # Note, this may put indels from the start at the end
+    logger.debug("InDels to add after: {0}", indels)
     for indel in indels[::-1]:
-        alignmentA.insert(alignmentA.index(indel) + 1, -1)
+        alignmentA.insert(alignmentA.index((indel) % period) + 1, -1)
     alignmentA = np.array(alignmentA)
     logger.debug("Unwrapped alignment with indels: {0}", alignmentA)
     return alignmentA
@@ -967,8 +970,8 @@ def cascading_needleman_wunsch(
     )
 
     logger.info("roll_factor (interpolated, base):\t{0}", roll_factor)
-    logger.info("Aligned sequence #1 (interpolated, wrapped):\t{0}", alignmentAWrapped)
-    logger.info("Aligned sequence #2 (interpolated):\t\t\t{0}", alignmentB)
+    logger.debug("Aligned sequence #1 (interpolated, wrapped):\t{0}", alignmentAWrapped)
+    logger.debug("Aligned sequence #2 (interpolated):\t\t\t{0}", alignmentB)
 
     # roll Alignment A, taking care of indels
     alignmentA = wrap_and_roll(alignmentAWrapped, period, roll_factor)
@@ -977,8 +980,8 @@ def cascading_needleman_wunsch(
     roll_factor = get_roll_factor_at(alignmentA, alignmentB, ref_seq_phase)
 
     logger.info("roll_factor (interpolated, specific):\t{0}", roll_factor)
-    logger.info("Aligned sequence #1 (interpolated, unwrapped):\t{0}", alignmentA)
-    logger.info("Aligned sequence #2 (interpolated):\t\t\t{0}", alignmentB)
+    logger.debug("Aligned sequence #1 (interpolated, unwrapped):\t{0}", alignmentA)
+    logger.debug("Aligned sequence #2 (interpolated):\t\t\t{0}", alignmentB)
 
     # # Undo interpolation
     # if interpolation_factor is not None:
@@ -997,4 +1000,4 @@ def cascading_needleman_wunsch(
     #     logger.info("Aligned sequence #1 (wrapped):\t\t{0}", alignmentA)
     #     logger.info("Aligned sequence #2:\t\t\t{0}", alignmentB)
 
-    return alignmentA, alignmentB, roll_factor, score
+    return roll_factor, score
