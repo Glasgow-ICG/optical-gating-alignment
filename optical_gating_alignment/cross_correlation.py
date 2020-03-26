@@ -155,4 +155,4 @@ def rolling_cross_correlation(
     logger.info("Rolled by {0}", roll_factor)
     logger.debug("Score: {0}", minimum_value)
 
-    return (alignment1, alignment2, (roll_factor) % length2, minimum_value)
+    return roll_factor % length2, minimum_value
