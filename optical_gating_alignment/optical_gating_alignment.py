@@ -251,7 +251,7 @@ def process_sequence(
                         score,
                     )
                 )
-                logger.debug("Adding shift: {0}", shifts[-1])
+                logger.debug("Adding shift: {0}", shift_history[-1])
             elif algorithm == "cnw":
                 if i == ref_seq_id:
                     logger.debug("Get target: Is ref_seq_id.")
@@ -323,7 +323,7 @@ def process_sequence(
                 shift_history.append(
                     (i, len(sequence_history) - 1, roll_factor % period_history[-1], 1)
                 )  # TODO add score here?
-                logger.debug("Adding shift: {0}", shifts[-1])
+                logger.debug("Adding shift: {0}", shift_history[-1])
 
     logger.debug("Printing shifts:")
     logger.debug(shift_history)

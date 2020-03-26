@@ -206,7 +206,7 @@ def test_rolling_cross_correlation_uint8_equal():
     for roll in np.arange(period1):
         sequence2 = np.roll(sequence1, roll, axis=0)
 
-        (_, _, roll_factor, _) = cc.rolling_cross_correlation(
+        roll_factor, _ = cc.rolling_cross_correlation(
             sequence1, sequence2, period1, period2,
         )
 
@@ -229,7 +229,7 @@ def test_rolling_cross_correlation_uint16_equal():
     for roll in np.arange(period1):
         sequence2 = np.roll(sequence1, roll, axis=0)
 
-        (_, _, roll_factor, _) = cc.rolling_cross_correlation(
+        roll_factor, _ = cc.rolling_cross_correlation(
             sequence1, sequence2, period1, period2,
         )
         roll_factor = roll_factor % period2

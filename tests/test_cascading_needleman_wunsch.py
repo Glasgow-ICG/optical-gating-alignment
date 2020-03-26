@@ -285,22 +285,38 @@ def test_construct_cascade_self_uint8():
 def test_wrap_and_roll_gapless():
     # this test uses a gapless sequence, therefore should be equivalent to np.roll
     alignment1Wrapped = hlp.toy_sequence(seq_type="alignment")
-    period1 = 9  # use integer
+    period1 = 10  # use integer
 
     accurate = []
     for roll in np.arange(period1 + 1):
         alignment1 = cnw.wrap_and_roll(alignment1Wrapped, period1, roll)
         alignment2 = np.roll(alignment1Wrapped, roll, axis=0)
+        print(alignment1, alignment2)
         accurate.append(np.all(alignment1 == alignment2))
 
     assert np.all(accurate)
+
+
+# def test_wrap_and_roll_gapless_nonint():
+#     # this test uses a gapless sequence, therefore should be equivalent to np.roll
+#     alignment1Wrapped = hlp.toy_sequence(seq_type="alignment")
+#     period1 = 10 - 0.4  # use integer
+
+#     accurate = []
+#     for roll in np.arange(period1 + 1):
+#         alignment1 = cnw.wrap_and_roll(alignment1Wrapped, period1, roll)
+#         alignment2 = np.roll(alignment1Wrapped, roll, axis=0)
+#         print(alignment1, alignment2)
+#         accurate.append(np.all(alignment1 == alignment2))
+
+#     assert np.all(accurate)
 
 
 def test_wrap_and_roll_gapped():
     # this test uses a gapped sequence
     # but removes the gaps before comparing to np.roll
     alignment1Wrapped = hlp.toy_sequence(seq_type="alignment")
-    period1 = 9  # use integer
+    period1 = 10  # use integer
 
     accurate = []
     for gap in np.arange(period1 + 1):
@@ -315,35 +331,35 @@ def test_wrap_and_roll_gapped():
     assert np.all(accurate)
 
 
-def test_wrap_and_roll_gapped_nonint():
-    # this test uses a gapped sequence
-    # but removes the gaps before comparing to np.roll
-    alignment1Wrapped = hlp.toy_sequence(seq_type="alignment")
-    period1 = 9 - 0.4
+# def test_wrap_and_roll_gapped_nonint():
+#     # this test uses a gapped sequence
+#     # but removes the gaps before comparing to np.roll
+#     alignment1Wrapped = hlp.toy_sequence(seq_type="alignment")
+#     period1 = 10 - 0.4
 
-    accurate = []
-    for gap in np.arange(period1 + 1, dtype=int):
-        alignment1Gapped = np.insert(alignment1Wrapped, gap, -1)
-        for roll in np.arange(period1 + 1, dtype=int):
-            alignment1 = cnw.wrap_and_roll(alignment1Gapped, period1, roll)
-            alignment1 = alignment1[alignment1 >= 0]
-            alignment2 = np.roll(alignment1Wrapped, roll, axis=0)
-            print(alignment1Gapped, alignment1, alignment2)
-            accurate.append(np.all(alignment1 == alignment2))
+#     accurate = []
+#     for gap in np.arange(period1 + 1, dtype=int):
+#         alignment1Gapped = np.insert(alignment1Wrapped, gap, -1)
+#         for roll in np.arange(period1 + 1, dtype=int):
+#             alignment1 = cnw.wrap_and_roll(alignment1Gapped, period1, roll)
+#             alignment1 = alignment1[alignment1 >= 0]
+#             alignment2 = np.roll(alignment1Wrapped, roll, axis=0)
+#             print(alignment1Gapped, alignment1, alignment2)
+#             accurate.append(np.all(alignment1 == alignment2))
 
-    assert np.all(accurate)
+#     assert np.all(accurate)
 
 
 def test_wrap_and_roll_doublegapped():
     # this test uses a double gapped sequence
     # but removes the gaps before comparing to np.roll
     alignment1Wrapped = hlp.toy_sequence(seq_type="alignment")
-    period1 = 9  # use integer
+    period1 = 10  # use integer
 
     accurate = []
     for gap in np.arange(period1 + 1):
         alignment1Gapped = np.insert(alignment1Wrapped, gap, -1)
-        alignment1Gapped = np.insert(alignment1Wrapped, gap, -1)
+        alignment1Gapped = np.insert(alignment1Gapped, gap, -1)
         for roll in np.arange(period1 + 1):
             alignment1 = cnw.wrap_and_roll(alignment1Gapped, period1, roll)
             alignment1 = alignment1[alignment1 >= 0]
@@ -365,7 +381,7 @@ def test_cascading_needleman_wunsch_self_uint8():
         sequence2 = np.roll(sequence1, roll, axis=0)
 
         for phase in np.arange(0.5, len(sequence1), 0.5):
-            _, _, roll_factor, _ = cnw.cascading_needleman_wunsch(
+            roll_factor, _ = cnw.cascading_needleman_wunsch(
                 sequence1,
                 sequence2,
                 period=None,
