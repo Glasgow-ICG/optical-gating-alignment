@@ -395,34 +395,23 @@ def traverse_traceback_matrix(sequence, template_sequence, traceback_matrix):
     return alignmentA, alignmentB
 
 
-def wrap_and_roll(alignmentAWrapped, period, roll_factor):
+def wrap_and_roll(alignmentA_wrapped, period, roll_factor):
     """Roll an alignment by roll_factor, taking care of indels."""
-    alignmentA = []
-    indels = []
-    logger.debug("Wrapped alignment with indels: {0}", alignmentAWrapped)
-    logger.debug("Period: {0}; Roll_factor: {1}", period, roll_factor)
-    for position in np.arange(alignmentAWrapped.shape[0]):
-        # for each alignment idx
-        if alignmentAWrapped[position] > -1:
-            # if not gap, add to output
-            alignmentA.append((alignmentAWrapped[position] - roll_factor) % (period))
-        else:
-            # if gap, work out the value to put the indel before
-            idx = position - 1
-            before = -1
-            while before < 0 and (idx % period) < alignmentAWrapped.shape[0]:
-                before = alignmentAWrapped[(idx) % len(alignmentAWrapped)]
-                idx = (idx + 1) % period
-            indels.append(before)
-    logger.debug("Unwrapped alignment with no indels: {0}", alignmentA)
-    # go through the indels from end to start and insert them
-    # Note, this may put indels from the start at the end
-    logger.debug("InDels to add after: {0}", indels)
-    for indel in indels[::-1]:
-        alignmentA.insert(alignmentA.index((indel) % period) + 1, -1)
-    alignmentA = np.array(alignmentA)
-    logger.debug("Unwrapped alignment with indels: {0}", alignmentA)
-    return alignmentA
+    # TODO - Do I actually care about the period?
+    logger.trace("Wrapped alignment with gaps: {0}", alignmentA_wrapped)
+
+    (gap_idx,) = np.where(alignmentA_wrapped == -1)
+
+    alignmentA_unwrapped = np.roll(
+        alignmentA_wrapped[alignmentA_wrapped > -1], -roll_factor
+    )
+    logger.trace("Unwrapped alignment without gaps: {0}", alignmentA_unwrapped)
+
+    for gap in gap_idx:
+        alignmentA_unwrapped = np.insert(alignmentA_unwrapped, gap, -1)
+    logger.trace("Unwrapped alignment with gaps: {0}", alignmentA_unwrapped)
+
+    return alignmentA_unwrapped
 
 
 def cascading_needleman_wunsch(
