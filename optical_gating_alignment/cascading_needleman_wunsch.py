@@ -10,618 +10,185 @@ import j_py_sad_correlation as jps
 logger.disable("optical_gating_alignment")
 
 
-def get_roll_factor_at(alignment1, alignment2, phase1):
-    """Get the precise roll factor for a known phase (phase1) in one sequence based on two alignments (alignment1 and alignment2). This allows the system to deal with arrhythmic sequences and the consequent indels."""
-    logger.debug("{0} {1} {2}", alignment1, alignment2, phase1)
+def get_roll_factor_at(alignment1, alignment2, target_phase1):
+    # Log alignments for debugging
+    logger.debug("alignment1: {0}", alignment1)
+    logger.debug("alignment2: {0}", alignment2)
+    logger.debug("target_phase1: {0}", target_phase1)
 
+    # Convert lists to arrays (if needed)
     if isinstance(alignment1, list):
         alignment1 = np.array(alignment1)
     if isinstance(alignment2, list):
         alignment2 = np.array(alignment2)
 
-    length1 = len(alignment1)
-    length2 = len(alignment2)
+    if int(target_phase1) > alignment1.max():  # is using int correct?
+        # I don't believe this should happen in the real world
+        logger.critical(
+            "Target phase {0} greater than any phase in alignment1! {1}",
+            target_phase1,
+            alignment1,
+        )
 
-    # First get the exact index of phase1 in alignment1
-    # Case 1: where phase1 is in alignment1
-    # i.e. phase1 likely to be a whole number
-    if phase1 in alignment1:
-        # DEVNOTE: we assume there is only ever one, which should be true or something has gone awry
-        idxPos = np.nonzero(alignment1 == phase1)[0][0]
-        logger.info("Exact phase {0} found at index {1} in alignment 1", phase1, idxPos)
-    # Case 2: where phase1 is not in alignment1
-    # find the indices in alignment1 that are the lower and upper bounds
-    # then use linear interpolation to get the exact index
+    # Search alignment1 for target_phase1
+    if target_phase1 in alignment1:
+        # Catch case where target_phase1 is exactly in alignment1
+        logger.debug("Exact phase found in alignment1.")
+        (target_index1,) = np.where(alignment1 == target_phase1)
+        target_index1 = target_index1[0]  # just to get rid of the list
     else:
-        logger.info(
-            "Exact phase {0} not found in alignment 1; searching for bounds.", phase1
+        # All other cases require interpolation
+        logger.debug("No exact phase found in alignment1; Interpolating...")
+        logger.trace("Lower: {0}", alignment1 < target_phase1)
+        logger.trace("Upper: {0}", alignment1 < target_phase1)
+        logger.trace("Gaps: {0}", alignment1 != -1)
+
+        # Find all (non-gap) elements lower than the target phase
+        (lower_index1,) = np.where(
+            np.all([alignment1 < target_phase1, alignment1 != -1], axis=0)
+            )
+        logger.debug("All suitable lower_index1 candidates: {0}", lower_index1)
+
+        # check there is only one contiguous stretch on indices
+        # if there are more than one (expect 2)
+        # then check which run is most likely to hold the correct lower_index1
+        contiguous_indices = np.split(
+            lower_index1, np.where(np.diff(lower_index1) > 1)[0] + 1
         )
-        # set starting bounds to a non-index
-        lower_bound = -1
-        upper_bound = -1
-        # DEVNOTE: the allow flag deals with the scenario that my alignment starts after the desired phase, i.e. alignment[0]>phase1, and wraps latter in the sequence
-        allow = False  # only turn on if I've seen a value smaller than desired
-        for idx1 in range(length1):
-            logger.debug(
-                "allow := {0};\tidx := {1};\talignment1[idx1] := {2};\t(alignment1[idx1]>=0) := {3};\t >= min(alignment1) := {4};\t > phase1 := {5}",
-                allow,
-                idx1,
-                alignment1[idx1],
-                alignment1[idx1] >= 0,
-                alignment1[idx1] == min(alignment1[alignment1 >= 0]),
-                alignment1[idx1] > phase1,
-            )
-            if alignment1[idx1] >= 0 and not allow and alignment1[idx1] < phase1:
-                # not gap (-1) and not started searching and lower than phase1
-                allow = True  # start searching for bounds
-                logger.debug(
-                    "Began searching for bounds at alignment1[{0}]={1}.",
-                    idx1,
-                    alignment1[idx1],
-                )
-            elif (
-                alignment1[idx1] >= 0
-                and not allow
-                and alignment1[idx1] == min(alignment1[alignment1 >= 0])
-                and alignment1[idx1] > phase1
-            ):
-                # not gap and not started and is smallest in alignment1
-                # but is greater than phase, i.e. target is between the wrap point
-                logger.info("Desired phase at alignment sequence 1 wrap point (type1)")
-                # set lower and upper bound and stop searching
-                lower_bound = idx1 - 1
-                upper_bound = idx1
-                logger.debug(
-                    "Preliminary bounds applied: {0} [{1}], {2} [{3}] for {4} (type1)",
-                    lower_bound,
-                    alignment1[lower_bound],
-                    upper_bound,
-                    alignment1[upper_bound],
-                    phase1,
-                )
-                break
-            elif allow and alignment1[idx1] > phase1:
-                # started and higher than phase1 (not gap implied)
-                lower_bound = idx1 - 1
-                upper_bound = idx1
-                logger.debug(
-                    "Preliminary bounds applied: {0} [{1}], {2} [{3}] for {4} (type1)",
-                    lower_bound,
-                    alignment1[lower_bound],
-                    upper_bound,
-                    alignment1[upper_bound],
-                    phase1,
-                )
-                break
-            elif allow and alignment1[idx1] == 0:
-                # started and wrap point (not gap implied)
-                # type2 wrap - set allow earlier but have now reached 0 value
-                # in alignment1 string and not found an alignment greater than
-                # phase1, i.e. presume it hovers between the highest value and the 0.
-                logger.info("Desired phase at alignment sequence 1 wrap point (type2)")
-                lower_bound = idx1 - 1
-                upper_bound = idx1
-                logger.debug(
-                    "Preliminary bounds applied: {0} [{1}], {2} [{3}] for {4} (type1)",
-                    lower_bound,
-                    alignment1[lower_bound],
-                    upper_bound,
-                    alignment1[upper_bound],
-                    phase1,
-                )
-                break
-
-        if lower_bound < 0 and upper_bound < 0 and not allow:
-            # no valid bounds set
-            # assume phase1 completely not in alignment then
-            # this should never happen so I don't have a test for it
-            logger.critical("Phase not found in alignment sequence 1")
-            logger.debug(phase1, alignment1)
-            return None
-
-        if lower_bound < 0 and upper_bound < 0 and allow:
-            # started searching but didn't set bounds
-            # assume bounds are around the wrap point
-            # this type of wrap point is when alignment 1
-            # ends lower than it starts, i.e. the wrap point
-            # of the ids sequence is in the middle of the actual string
-            logger.info("Wrapping around alignment sequence 1")
-            lower_bound = idx1
-            upper_bound = idx1 + 1
-            logger.debug(
-                "Preliminary bounds applied: {0} [{1}], {2} [{3}] for {4} (type1)",
-                lower_bound,
-                alignment1[lower_bound],
-                upper_bound,
-                alignment1[upper_bound % length1],
-                phase1,
-            )
-
-        # account for gaps in upper bound
-        while alignment1[upper_bound % length1] < 0:
-            logger.debug("Increasing upper bound by one due to indel.")
-            upper_bound = upper_bound + 1
-        # account for gaps in lower bound
-        while alignment1[lower_bound % length1] < 0:
-            logger.debug("Decreasing lower bound by one due to indel.")
-            lower_bound = lower_bound - 1
-
-        logger.info(
-            "Interpolating with lower bound of {0} and upper bound of {1}",
-            lower_bound,
-            upper_bound % length1,
+        logger.trace(
+            "Runs: {0}; Number of runs: {1};",
+            contiguous_indices,
+            len(contiguous_indices),
         )
+        if len(contiguous_indices) > 1:
+            for each_run in contiguous_indices:
+                logger.trace("Phases for this run: {0}", alignment1[each_run])
+                if alignment1[each_run[0]] < target_phase1 and (
+                    alignment1[each_run[-1]] > target_phase1 - 1
+        ):
+                    lower_index1 = each_run
+                    logger.debug("Taking a single contiguous run: {0}", lower_index1)
+                    break  # we assume the earliest stretch is likely the best
 
-        logger.debug(
-            "{0} {1} {2} {3} {4}",
-            lower_bound,
-            upper_bound,
-            length1,
-            lower_bound % length1,
-            upper_bound % length1,
-        )
-        if (
-            upper_bound % length1 == upper_bound
-            and lower_bound % length1 == lower_bound
-            and alignment1[upper_bound % length1] > alignment1[lower_bound % length1]
-        ):
-            logger.debug(
-                "Both upper and lower bounds within period1 and no wrapping in idx occurred."
-            )
-            interpolated_index1 = (phase1 - alignment1[lower_bound]) / (
-                alignment1[upper_bound] - alignment1[lower_bound]
-            )
-            logger.debug(
-                "interpolated index {0} = ({1} - {2}) / ({3} - {4}) = {5} / {6};",
-                interpolated_index1,
-                phase1,
-                alignment1[lower_bound],
-                alignment1[upper_bound],
-                alignment1[lower_bound],
-                (phase1 - alignment1[lower_bound]),
-                (alignment1[upper_bound] - alignment1[lower_bound]),
-            )
-        elif (
-            upper_bound % length1 == upper_bound
-            and lower_bound % length1 == lower_bound
-            and not alignment1[upper_bound % length1]
-            > alignment1[lower_bound % length1]
-        ):
-            logger.debug(
-                "Both upper and lower bounds within period1 but wrapping in idx occurred at upper bound."
-            )
-            interpolated_index1 = (phase1 - alignment1[lower_bound]) / (
-                alignment1.max() + 1 + alignment1[upper_bound] - alignment1[lower_bound]
-            )
-            logger.debug(
-                "interpolated index {0} = ({1} - {2}) / ({3} + {4} -{5}) = {6} / {7};",
-                interpolated_index1,
-                phase1,
-                alignment1[lower_bound],
-                alignment1.max() + 1,
-                alignment1[upper_bound],
-                alignment1[lower_bound],
-                (phase1 - alignment1[lower_bound]),
-                (alignment1.max() + alignment1[upper_bound] - alignment1[lower_bound]),
-            )
-        elif (
-            upper_bound % length1 == upper_bound
-            and not lower_bound % length1 == lower_bound
-            and alignment1[upper_bound % length1] > alignment1[lower_bound % length1]
-        ):
-            logger.debug(
-                "Only upper bound within period1 and no wrapping in idx occurred."
-            )
-            interpolated_index1 = (
-                phase1 - alignment1[lower_bound % length1] + length1
-            ) / (alignment1[upper_bound] - alignment1[lower_bound % length1])
-            logger.debug(
-                "interpolated index {0} = ({1} - {2}) / ({3} - {4}) = {5} / {6};",
-                interpolated_index1,
-                phase1,
-                alignment1[lower_bound % length1],
-                alignment1[upper_bound],
-                alignment1[lower_bound % length1],
-                (phase1 - alignment1[lower_bound % length1]),
-                (alignment1[upper_bound] - alignment1[lower_bound % length1]),
-            )
-        elif (
-            upper_bound % length1 == upper_bound
-            and not lower_bound % length1 == lower_bound
-            and not alignment1[upper_bound % length1]
-            > alignment1[lower_bound % length1]
-        ):
-            logger.debug(
-                "Only upper bound within period but wrapping in idx occurred at upper bound."
-            )
-            interpolated_index1 = (
-                phase1 - alignment1[lower_bound % length1] + length1
-            ) / (
-                alignment1.max()
-                + 1
-                + alignment1[upper_bound]
-                - alignment1[lower_bound % length1]
-            )
-            logger.debug(
-                "interpolated index {0} = ({1} - {2}) / ({3} + {4} - {5}) = {6} / {7};",
-                interpolated_index1,
-                phase1,
-                alignment1[lower_bound % length1],
-                alignment1.max(),
-                alignment1[upper_bound],
-                alignment1[lower_bound % length1],
-                (phase1 - alignment1[lower_bound % length1]),
-                (
-                    alignment1.max()
-                    + 1
-                    + alignment1[upper_bound]
-                    - alignment1[lower_bound % length1]
-                ),
-            )
-        elif (
-            not upper_bound % length1 == upper_bound
-            and lower_bound % length1 == lower_bound
-            and alignment1[upper_bound % length1] > alignment1[lower_bound % length1]
-        ):
-            logger.debug(
-                "Only lower bound within period1 and no wrapping in idx occurred."
-            )
-            interpolated_index1 = (phase1 - alignment1[lower_bound]) / (
-                alignment1[upper_bound % length1] - alignment1[lower_bound]
-            )
-            logger.debug(
-                "interpolated index {0} = ({1} - {2}) / ({4} - {5}) = {6} / {7};",
-                interpolated_index1,
-                phase1,
-                alignment1[lower_bound],
-                length1,
-                alignment1[upper_bound % length1],
-                alignment1[lower_bound],
-                (phase1 - alignment1[lower_bound]),
-                (alignment1[upper_bound % length1] - alignment1[lower_bound]),
-            )
-        elif (
-            not upper_bound % length1 == upper_bound
-            and lower_bound % length1 == lower_bound
-            and not alignment1[upper_bound % length1]
-            > alignment1[lower_bound % length1]
-        ):
-            logger.debug(
-                "Only lower bound within period1 but wrapping in idx occurred at upper bound."
-            )
-            interpolated_index1 = (phase1 - alignment1[lower_bound]) / (
-                +length1 + alignment1[upper_bound % length1] - alignment1[lower_bound]
-            )
-            logger.debug(
-                "interpolated index {0} = ({1} - {2}) / ({3} + {4} - {5}) = {6} / {7};",
-                interpolated_index1,
-                phase1,
-                alignment1[lower_bound],
-                length1,
-                alignment1[upper_bound % length1],
-                alignment1[lower_bound],
-                (phase1 - alignment1[lower_bound]),
-                (alignment1[upper_bound % length1] - alignment1[lower_bound]),
-            )
+        # take the last one from the run
+        lower_index1 = lower_index1[-1]
+        if lower_index1 >= len(alignment1) - 1:
+            logger.debug("lower_index1 is at the end of alignment1")
+            upper_index1 = lower_index1 + 1
+            while alignment1[upper_index1 % len(alignment1)] == -1:
+                upper_index1 = upper_index1 + 1
         else:
-            logger.critical("I don't think this should ever be reached!")
+            # Find all (non-gap) elements greater than the target phase
+            (upper_index1,) = np.where(
+                np.all([alignment1 > target_phase1, alignment1 != -1], axis=0)
+            )
+            # catch issues caused by wrapping in alignmnent1
+            if len(upper_index1[upper_index1 > lower_index1]) > 0:
+                #  alignment1[0] != min and alignment1[-1] != min
+                # Note: this method is safe to gaps
+                upper_index1 = upper_index1[upper_index1 > lower_index1]
+            logger.debug("All suitable upper_index1 candidates: {0}", upper_index1)
+            # take the first one
+            upper_index1 = upper_index1[0]
+            # catch when lower_index1 is at the end and upper_index1 at the start
+            # i.e. a wrap event
+            if upper_index1 < lower_index1:
+                upper_index1 = upper_index1 + len(alignment1)
+                logger.debug("Unwrapping upper_index1.")
 
-        idxPos = (interpolated_index1 * (upper_bound - lower_bound)) + lower_bound
+            if upper_index1 == len(alignment1):
+                # I don't think this is a problem but I've kept it in for debugging
+                logger.debug("upper_index1 is at the end of alignment1")
 
-        logger.info("Phase positioned at interpolated index {0} in alignment 1", idxPos)
+        lower_phase1 = alignment1[lower_index1 % len(alignment1)]
+        upper_phase1 = alignment1[upper_index1 % len(alignment1)]
+        # catch when lower_phase1 is at the end and upper_phase1 at the start
+        # i.e. a wrap event
+        if upper_phase1 < lower_phase1:
+            upper_phase1 = upper_phase1 + alignment2.max() + 1
+            logger.debug("Unwrapping upper_phase1.")
 
+        # get interpolated index
         logger.debug(
-            "phase1 := {0};\tlower_bound := {1};\talignment1 := {2};\tupper_bound := {3};\t length1 := {4};\t(upper_bound %% length1) := {5};\talignment1 := {6};\tinterpolated_index1 :={7};",
-            phase1,
-            lower_bound,
-            alignment1[lower_bound],
-            upper_bound,
-            length1,
-            upper_bound % length1,
-            alignment1[upper_bound % length1],
-            interpolated_index1,
+            "Lower bound: {0} ({1}); Upper bound (unwrapped): {2} ({3})",
+            lower_index1,
+            lower_phase1,
+            upper_index1,
+            upper_phase1,
         )
+        target_index1 = lower_index1 + (
+            (target_phase1 - lower_phase1)
+            * (upper_index1 - lower_index1)
+            / (upper_phase1 - lower_phase1)
+        ) % len(alignment1)
 
-    # Map precise index to alignment2, considering gaps
-    # case where phase captured in alignment1 is integer and valid in alignment2
-    phase2 = None
-
-    # DEVNOTE: the middle criterion is needed because alignments may not be the same length
-    if (
-        (idxPos // 1) == idxPos
-        and idxPos < len(alignment2)
-        and alignment2[int(idxPos)] >= 0
-    ):
-        # index is integer, less than the length of alignment sequence 2 and that position isn't a gap
-        phase2 = alignment2[int(idxPos)]
         logger.info(
-            "Exact index {0} used in alignment 2 [{1}] to match a phase of {2}",
-            idxPos,
-            phase2,
-            phase1,
+        "Target phase of {0} at index {1} of alignment1", target_phase1, target_index1
         )
 
+    target_index2 = None
+    # Consider target_index in alignment2
+    if np.isclose(target_index1 // 1, target_index1):
+        # Catch case where target_index is, essentially, an integer
+        logger.debug("Exact index used for alignment2.")
+        target_phase2 = alignment2[int(target_index1) % len(alignment2)]
+        if target_phase2 != -1:
+            target_index2 = int(target_index1)
     else:
-        alignment2_lower_bound = int(idxPos)  # same as np.floor
-        alignment2_upper_bound = int(idxPos + 1)  # same as np.ceil
-        logger.debug("{0} {1}", alignment2_lower_bound, alignment2_upper_bound)
-        logger.debug("{0} {1}", length1, length2)
+            logger.debug("Target index in alignment2 is a gap. Will use interpolation.")
 
-        # check not same value (occurs when exactly hits an index)
-        if alignment2_lower_bound == alignment2_upper_bound:
-            logger.debug("Lower and upper bounds equal; increasing upper bound.")
-            alignment2_upper_bound = alignment2_upper_bound + 1
+    if target_index2 == None:
+        # This situation requires interpolation or gap dealing
+        logger.debug("No exact index found in alignment2; Interpolating...")
+        target_index2 = target_index1.copy()
 
-        # deal with gaps in alignment2
-        while alignment2[int(alignment2_lower_bound % length2)] < 0:
-            alignment2_lower_bound = alignment2_lower_bound - 1
-        while alignment2[int(alignment2_upper_bound % length2)] < 0:
-            alignment2_upper_bound = alignment2_upper_bound + 1
+        # Get phase at index before
+        lower_index2 = int(target_index1)
+        lower_phase2 = alignment2[lower_index2 % len(alignment2)]
+        while lower_phase2 == -1:
+            # Deal with gaps
+            logger.debug("lower_phase2 is a gap, decreasing lower_index2 by 1.")
+            lower_index2 = lower_index2 - 1
+            lower_phase2 = alignment2[lower_index2 % len(alignment2)]
 
-        # interpolate for exact position
-        logger.debug(
-            "Interpolating with lower bound of {0} and upper bound of {1}",
-            alignment2_lower_bound % length2,
-            alignment2_upper_bound % length2,
-        )
+        # Get phase at index after
+        upper_index2 = int(target_index1 + 1)
+        upper_phase2 = alignment2[upper_index2 % len(alignment2)]
+        while upper_phase2 == -1:
+            # Deal with gaps
+            logger.debug("upper_phase2 is a gap, increasing upper_index2 by 1.")
+            upper_index2 = upper_index2 + 1
+            upper_phase2 = alignment2[upper_index2 % len(alignment2)]
 
-        # FIXME
-        if (
-            alignment2_upper_bound % length2 == alignment2_upper_bound
-            and alignment2_lower_bound % length2 == alignment2_lower_bound
-            and alignment2[alignment2_upper_bound % length2]
-            > alignment2[alignment2_lower_bound % length2]
-        ):
-            logger.debug(
-                "Both upper and lower bounds within period and no wrapping occurred."
-            )
-            interpolated_index2 = (idxPos - alignment2_lower_bound) / (
-                alignment2_upper_bound - alignment2_lower_bound
-            )
-            logger.debug(
-                "interpolated index2 {0} = ({1} - {2}) / ({3} - {4}) = {5} / {6};",
-                interpolated_index2,
-                idxPos,
-                alignment2_lower_bound,
-                alignment2_upper_bound,
-                alignment2_lower_bound,
-                (idxPos - alignment2_lower_bound),
-                (alignment2_upper_bound - alignment2_lower_bound),
-            )
-            phase2 = (
-                interpolated_index2 * (alignment2[alignment2_upper_bound] + 1)
-            ) + alignment2[alignment2_lower_bound]
-            logger.debug(
-                "phase2 {0} = {1} * ({2} + {3} + 1) + {4} = {5} * {6} + {7};",
-                phase2,
-                interpolated_index2,
-                alignment2.max(),
-                alignment2[alignment2_upper_bound % length2],
-                alignment2[alignment2_lower_bound],
-                interpolated_index2,
-                (alignment2.max() + alignment2[alignment2_upper_bound] + 1),
-                alignment2[alignment2_lower_bound],
-            )
-        elif (
-            alignment2_upper_bound % length2 == alignment2_upper_bound
-            and alignment2_lower_bound % length2 == alignment2_lower_bound
-            and not alignment2[alignment2_upper_bound % length2]
-            > alignment2[alignment2_lower_bound % length2]
-        ):
-            logger.debug(
-                "Both upper and lower bounds within period but wrapping occurred in alignment2_upper_bound."
-            )
-            interpolated_index2 = (idxPos - alignment2_lower_bound) / (
-                alignment2_upper_bound - alignment2_lower_bound
-            )
-            logger.debug(
-                "interpolated index2 {0} = ({1} - {2}) / ({3} - {4}) = {5} / {6};",
-                interpolated_index2,
-                idxPos,
-                alignment2_lower_bound,
-                alignment2_upper_bound,
-                alignment2_lower_bound,
-                (idxPos - alignment2_lower_bound),
-                (alignment2_upper_bound - alignment2_lower_bound),
-            )
-            phase2 = (
-                interpolated_index2
-                * (alignment2.max() + alignment2[alignment2_upper_bound] + 1)
-            ) + alignment2[alignment2_lower_bound]
-            logger.debug(
-                "phase2 {0} = {1} * ({2} + {3} + 1) + {4} = {5} * {6} + {7};",
-                phase2,
-                interpolated_index2,
-                alignment2.max(),
-                alignment2[alignment2_upper_bound % length2],
-                alignment2[alignment2_lower_bound],
-                interpolated_index2,
-                (alignment2.max() + alignment2[alignment2_upper_bound] + 1),
-                alignment2[alignment2_lower_bound],
-            )
-        elif (
-            alignment2_upper_bound % length2 == alignment2_upper_bound
-            and not alignment2_lower_bound % length2 == alignment2_lower_bound
-            and alignment2[alignment2_upper_bound % length2]
-            > alignment2[alignment2_lower_bound % length2]
-        ):
-            logger.debug("Only upper bound within period and no wrapping occurred.")
-            interpolated_index2 = (idxPos - alignment2_lower_bound + length2) / (
-                alignment2_upper_bound - alignment2_lower_bound
-            )
-            logger.debug(
-                "interpolated index2 {0} = ({1} - {2} + {3}) / ({4} - {5}) = {6} / {7};",
-                interpolated_index2,
-                idxPos,
-                alignment2_lower_bound,
-                length2,
-                alignment2_upper_bound,
-                alignment2_lower_bound,
-                (idxPos - alignment2_lower_bound),
-                (alignment2_upper_bound - alignment2_lower_bound),
-            )
-            phase2 = (
-                interpolated_index2 * (alignment2[alignment2_upper_bound] + 1)
-            ) + alignment2[alignment2_lower_bound]
-            logger.debug(
-                "phase2 {0} = {1} * ({2} + {3} + 1) + {4} = {5} * {6} + {7};",
-                phase2,
-                interpolated_index2,
-                alignment2.max(),
-                alignment2[alignment2_upper_bound % length2],
-                alignment2[alignment2_lower_bound],
-                interpolated_index2,
-                (alignment2.max() + alignment2[alignment2_upper_bound] + 1),
-                alignment2[alignment2_lower_bound],
-            )
-        elif (
-            alignment2_upper_bound % length2 == alignment2_upper_bound
-            and not alignment2_lower_bound % length2 == alignment2_lower_bound
-            and not alignment2[alignment2_upper_bound % length2]
-            > alignment2[alignment2_lower_bound % length2]
-        ):
-            logger.debug(
-                "Only upper bound within period but wrapping occurred in upper bound."
-            )
-            interpolated_index2 = (idxPos - alignment2_lower_bound + length2) / (
-                alignment2_upper_bound - alignment2_lower_bound
-            )
-            logger.debug(
-                "interpolated index2 {0} = ({1} - {2} + {3}) / ({4} - {5}) = {6} / {7};",
-                interpolated_index2,
-                idxPos,
-                alignment2_lower_bound,
-                length2,
-                alignment2_upper_bound,
-                alignment2_lower_bound,
-                (idxPos - alignment2_lower_bound),
-                (alignment2_upper_bound - alignment2_lower_bound),
-            )
-            phase2 = (
-                interpolated_index2
-                * (alignment2.max() + alignment2[alignment2_upper_bound] + 1)
-            ) + alignment2[alignment2_lower_bound]
-            logger.debug(
-                "phase2 {0} = {1} * ({2} + {3} + 1) + {4} = {5} * {6} + {7};",
-                phase2,
-                interpolated_index2,
-                alignment2.max(),
-                alignment2[alignment2_upper_bound % length2],
-                alignment2[alignment2_lower_bound],
-                interpolated_index2,
-                (alignment2.max() + alignment2[alignment2_upper_bound] + 1),
-                alignment2[alignment2_lower_bound],
-            )
-        elif (
-            not alignment2_upper_bound % length2 == alignment2_upper_bound
-            and alignment2_lower_bound % length2 == alignment2_lower_bound
-            and alignment2[alignment2_upper_bound % length2]
-            > alignment2[alignment2_lower_bound % length2]
-        ):
-            logger.debug("Only lower bound within period and no wrapping.")
-            interpolated_index2 = (idxPos - alignment2_lower_bound) / (
-                alignment2_upper_bound - alignment2_lower_bound
-            )
-            logger.debug(
-                "interpolated index2 {0} = ({1} - {2}) / ({4} - {5}) = {6} / {7};",
-                interpolated_index2,
-                idxPos,
-                alignment2_lower_bound,
-                length2,
-                alignment2_upper_bound,
-                alignment2_lower_bound,
-                (idxPos - alignment2_lower_bound),
-                (alignment2_upper_bound - alignment2_lower_bound),
-            )
-            phase2 = (
-                interpolated_index2 * (alignment2[alignment2_upper_bound % length2] + 1)
-            ) + alignment2[alignment2_lower_bound]
-            logger.debug(
-                "phase2 {0} = {1} * ({2} + {3} + 1) + {4} = {5} * {6} + {7};",
-                phase2,
-                interpolated_index2,
-                alignment2.max(),
-                alignment2[alignment2_upper_bound % length2],
-                alignment2[alignment2_lower_bound],
-                interpolated_index2,
-                (alignment2.max() + alignment2[alignment2_upper_bound % length2] + 1),
-                alignment2[alignment2_lower_bound],
-            )
-        elif (
-            not alignment2_upper_bound % length2 == alignment2_upper_bound
-            and alignment2_lower_bound % length2 == alignment2_lower_bound
-            and not alignment2[alignment2_upper_bound % length2]
-            > alignment2[alignment2_lower_bound % length2]
-        ):
-            logger.debug(
-                "Only lower bound within period but wrapping occurred in upper bound."
-            )
-            interpolated_index2 = (idxPos - alignment2_lower_bound) / (
-                alignment2_upper_bound - alignment2_lower_bound
-            )
-            logger.debug(
-                "interpolated index2 {0} = ({1} - {2}) / ({4} - {5}) = {6} / {7};",
-                interpolated_index2,
-                idxPos,
-                alignment2_lower_bound,
-                length2,
-                alignment2_upper_bound,
-                alignment2_lower_bound,
-                (idxPos - alignment2_lower_bound),
-                (alignment2_upper_bound - alignment2_lower_bound),
-            )
-            phase2 = (
-                interpolated_index2
-                * (alignment2.max() + alignment2[alignment2_upper_bound % length2] + 1)
-            ) + alignment2[alignment2_lower_bound]
-            logger.debug(
-                "phase2 {0} = {1} * ({2} + {3} + 1) + {4} = {5} * {6} + {7};",
-                phase2,
-                interpolated_index2,
-                alignment2.max(),
-                alignment2[alignment2_upper_bound % length2],
-                alignment2[alignment2_lower_bound],
-                interpolated_index2,
-                (alignment2.max() + alignment2[alignment2_upper_bound % length2] + 1),
-                alignment2[alignment2_lower_bound],
-            )
-        else:
-            logger.critical("I don't think this should ever be reached!")
+        # catch when lower_phase2 is at the end and upper_phase2 at the start
+        # i.e. a wrap event
+        if upper_phase2 < lower_phase2:
+            upper_phase2 = upper_phase2 + alignment2.max() + 1
+            logger.debug("Unwrapping upper_phase2.")
 
-        interpolated_index2 = (idxPos - alignment2_lower_bound) / (
-            alignment2_upper_bound - alignment2_lower_bound
-        )
-        if (
-            alignment2[alignment2_upper_bound % length2]
-            < alignment2[alignment2_lower_bound]
-        ):
-            phase2 = (
-                interpolated_index2
-                * (
-                    (
-                        alignment2[alignment2_lower_bound]
-                        + alignment2[alignment2_upper_bound % length2]
-                        + 1
-                    )
-                    - alignment2[alignment2_lower_bound]
-                )
-            ) + alignment2[alignment2_lower_bound]
-        else:
-            phase2 = (
-                interpolated_index2
-                * (
-                    alignment2[alignment2_upper_bound % length2]
-                    - alignment2[alignment2_lower_bound]
-                )
-            ) + alignment2[alignment2_lower_bound]
+        # Get interpolated phase
+            logger.debug(
+            "Lower bound: {0} ({1}); Upper bound (unwrapped): {2} ({3})",
+            lower_index2,
+            lower_phase2,
+            upper_index2,
+            upper_phase2,
+            )
+        target_phase2 = lower_phase2 + (
+            (target_index2 - lower_index2)
+            * (upper_phase2 - lower_phase2)
+            / (upper_index2 - lower_index2)
+            )
+
         logger.info(
-            "Interpolated index used to calculate phase of {0} in alignment 2", phase2
+        "New target phase of {0} at index {1} of alignment2",
+        target_phase2,
+        target_index2,
         )
 
-    if phase2 is None:
-        logger.critical("No phase calculated for alignment sequence 2")
-
-    roll_factor = (phase1 - phase2) % length2  # TODO - why?!
+    # calculate roll_factor
+    roll_factor = (target_phase2 - target_phase1) % len(alignment1)
+    logger.info("Roll_factor of {0}", roll_factor)
 
     return roll_factor
 
