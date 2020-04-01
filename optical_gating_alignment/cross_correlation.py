@@ -150,8 +150,8 @@ def rolling_cross_correlation(
     alignment1 = (np.arange(0, length1) - roll_factor) % length1
     alignment2 = np.arange(0, length2)
 
-    logger.info("Alignment 1:\t{0}", alignment1)
-    logger.info("Alignment 2:\t{0}", alignment2)
+    logger.debug("Alignment 1:\t{0}", alignment1)
+    logger.debug("Alignment 2:\t{0}", alignment2)
     logger.info("Rolled by {0}", roll_factor)
     logger.debug("Score: {0}", minimum_value)
 
