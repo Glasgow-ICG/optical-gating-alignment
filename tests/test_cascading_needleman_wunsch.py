@@ -40,7 +40,7 @@ def test_get_roll_factor_at():
     accurate = []
     for roll in np.arange(len(alignment1) + 1):
         # shift alignment
-        alignment2 = np.roll(alignment1, roll, axis=0)
+        alignment2 = np.roll(alignment1, -roll, axis=0)
 
         for phase1 in np.arange(0, len(alignment1), 0.5):
             # get roll factor
@@ -48,26 +48,7 @@ def test_get_roll_factor_at():
             print(roll, phase1, roll_factor, np.abs(roll_factor - roll) < 0.1)
 
             # small catch for rounding errors
-            accurate.append(np.abs(roll_factor - (roll % len(alignment1))) < 0.1)
-
-    assert np.all(accurate)
-
-
-def test_get_roll_factor_at_wrap1():
-    # toy alignment data
-    alignment1 = hlp.toy_sequence(seq_type="alignment") + 1
-    # the +1 makes a phase of 0 be at the wrap1 point
-
-    accurate = []
-    for roll in np.arange(len(alignment1) + 1):
-        # shift alignment
-        alignment2 = np.roll(alignment1, roll, axis=0)
-
-        # get roll factor
-        roll_factor = cnw.get_roll_factor_at(alignment1, alignment2, 0)
-
-        # small catch for rounding errors and for wrap point induced errors
-        accurate.append(np.abs(roll_factor - (roll % len(alignment1))) < 0.1)
+            accurate.append(np.isclose(roll_factor, (roll % len(alignment1))))
 
     assert np.all(accurate)
 
@@ -81,17 +62,17 @@ def test_get_roll_factor_at_wrap2():
     accurate = []
     for roll in np.arange(len(alignment1) + 1):
         # shift alignment
-        alignment2 = np.roll(alignment1, roll, axis=0)
+        alignment2 = np.roll(alignment1, -roll, axis=0)
 
         # get roll factor
         roll_factor = cnw.get_roll_factor_at(
             alignment1, alignment2, len(alignment1) - 0.5
         )
 
-        print(roll, 9.5, roll_factor)
+        print(roll, len(alignment1) - 0.5, roll_factor)
 
         # small catch for rounding errors and for wrap point induced errors
-        accurate.append(np.abs(roll_factor - (roll % len(alignment1))) < 0.1)
+        accurate.append(np.isclose(roll_factor, (roll % len(alignment1))))
 
     assert np.all(accurate)
 
@@ -239,14 +220,14 @@ def test_construct_cascade_self_uint8():
 
     known_scores = [
         0,
-        -8192,
-        -32768,
-        -335872,
-        -2015232,
-        -5160960,
-        -1523712,
-        -229376,
         -16384,
+        -229376,
+        -1523712,
+        -5160960,
+        -2015232,
+        -335872,
+        -32768,
+        -8192,
     ]
 
     print(cascade[-1, -1, :])
@@ -290,26 +271,11 @@ def test_wrap_and_roll_gapless():
     accurate = []
     for roll in np.arange(period1 + 1):
         alignment1 = cnw.wrap_and_roll(alignment1Wrapped, period1, roll)
-        alignment2 = np.roll(alignment1Wrapped, roll, axis=0)
+        alignment2 = np.roll(alignment1Wrapped, -roll, axis=0)
         print(alignment1, alignment2)
         accurate.append(np.all(alignment1 == alignment2))
 
     assert np.all(accurate)
-
-
-# def test_wrap_and_roll_gapless_nonint():
-#     # this test uses a gapless sequence, therefore should be equivalent to np.roll
-#     alignment1Wrapped = hlp.toy_sequence(seq_type="alignment")
-#     period1 = 10 - 0.4  # use integer
-
-#     accurate = []
-#     for roll in np.arange(period1 + 1):
-#         alignment1 = cnw.wrap_and_roll(alignment1Wrapped, period1, roll)
-#         alignment2 = np.roll(alignment1Wrapped, roll, axis=0)
-#         print(alignment1, alignment2)
-#         accurate.append(np.all(alignment1 == alignment2))
-
-#     assert np.all(accurate)
 
 
 def test_wrap_and_roll_gapped():
@@ -324,30 +290,11 @@ def test_wrap_and_roll_gapped():
         for roll in np.arange(period1 + 1):
             alignment1 = cnw.wrap_and_roll(alignment1Gapped, period1, roll)
             alignment1 = alignment1[alignment1 >= 0]
-            alignment2 = np.roll(alignment1Wrapped, roll, axis=0)
+            alignment2 = np.roll(alignment1Wrapped, -roll, axis=0)
             print(alignment1Gapped, alignment1, alignment2)
             accurate.append(np.all(alignment1 == alignment2))
 
     assert np.all(accurate)
-
-
-# def test_wrap_and_roll_gapped_nonint():
-#     # this test uses a gapped sequence
-#     # but removes the gaps before comparing to np.roll
-#     alignment1Wrapped = hlp.toy_sequence(seq_type="alignment")
-#     period1 = 10 - 0.4
-
-#     accurate = []
-#     for gap in np.arange(period1 + 1, dtype=int):
-#         alignment1Gapped = np.insert(alignment1Wrapped, gap, -1)
-#         for roll in np.arange(period1 + 1, dtype=int):
-#             alignment1 = cnw.wrap_and_roll(alignment1Gapped, period1, roll)
-#             alignment1 = alignment1[alignment1 >= 0]
-#             alignment2 = np.roll(alignment1Wrapped, roll, axis=0)
-#             print(alignment1Gapped, alignment1, alignment2)
-#             accurate.append(np.all(alignment1 == alignment2))
-
-#     assert np.all(accurate)
 
 
 def test_wrap_and_roll_doublegapped():
@@ -363,7 +310,7 @@ def test_wrap_and_roll_doublegapped():
         for roll in np.arange(period1 + 1):
             alignment1 = cnw.wrap_and_roll(alignment1Gapped, period1, roll)
             alignment1 = alignment1[alignment1 >= 0]
-            alignment2 = np.roll(alignment1Wrapped, roll, axis=0)
+            alignment2 = np.roll(alignment1Wrapped, -roll, axis=0)
             print(alignment1Gapped, alignment1, alignment2)
             accurate.append(np.all(alignment1 == alignment2))
 
@@ -372,27 +319,33 @@ def test_wrap_and_roll_doublegapped():
 
 def test_cascading_needleman_wunsch_self_uint8():
     # toy image sequences
-    sequence1 = hlp.toy_sequence(
+    template_sequence = hlp.toy_sequence(
         length=10, seq_type="image", knowledge_type="known", dtype="uint8"
     )
 
     accurate = []
-    for roll in np.arange(len(sequence1) + 1):
-        sequence2 = np.roll(sequence1, roll, axis=0)
+    for roll in np.arange(len(template_sequence) + 1):
+        rolled_sequence = np.roll(
+            template_sequence, -roll, axis=0
+        )  # why does this have to be negative?!
 
-        for phase in np.arange(0.5, len(sequence1), 0.5):
+        for phase in np.arange(0, len(template_sequence) - 1, 0.5):
+            # print(rolled_sequence[:, 0, 0], template_sequence[:, 0, 0])
             roll_factor, _ = cnw.cascading_needleman_wunsch(
-                sequence1,
-                sequence2,
+                rolled_sequence,
+                template_sequence,
                 period=None,
                 template_period=None,
                 gap_penalty=0,
                 interpolation_factor=None,
                 ref_seq_phase=phase,
             )
-
+            # print(
+            #     rolled_sequence[alignmentA.astype("int"), 0, 0],
+            #     template_sequence[alignmentB.astype("int"), 0, 0],
+            # )
             # small catch for rounding errors and for wrap point induced errors
-            accurate.append(np.abs(roll_factor - (roll % len(sequence1))) < 0.1)
+            accurate.append(np.abs(roll_factor - (roll % len(rolled_sequence))) < 0.1)
             print(roll, phase, roll_factor)
 
     assert np.all(accurate)
