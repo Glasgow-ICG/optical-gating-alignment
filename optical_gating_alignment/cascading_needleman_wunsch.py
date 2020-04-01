@@ -46,7 +46,7 @@ def get_roll_factor_at(alignment1, alignment2, target_phase1):
         # Find all (non-gap) elements lower than the target phase
         (lower_index1,) = np.where(
             np.all([alignment1 < target_phase1, alignment1 != -1], axis=0)
-            )
+        )
         logger.debug("All suitable lower_index1 candidates: {0}", lower_index1)
 
         # check there is only one contiguous stretch on indices
@@ -65,7 +65,7 @@ def get_roll_factor_at(alignment1, alignment2, target_phase1):
                 logger.trace("Phases for this run: {0}", alignment1[each_run])
                 if alignment1[each_run[0]] < target_phase1 and (
                     alignment1[each_run[-1]] > target_phase1 - 1
-        ):
+                ):
                     lower_index1 = each_run
                     logger.debug("Taking a single contiguous run: {0}", lower_index1)
                     break  # we assume the earliest stretch is likely the best
@@ -122,9 +122,9 @@ def get_roll_factor_at(alignment1, alignment2, target_phase1):
             / (upper_phase1 - lower_phase1)
         ) % len(alignment1)
 
-        logger.info(
+    logger.info(
         "Target phase of {0} at index {1} of alignment1", target_phase1, target_index1
-        )
+    )
 
     target_index2 = None
     # Consider target_index in alignment2
@@ -134,7 +134,7 @@ def get_roll_factor_at(alignment1, alignment2, target_phase1):
         target_phase2 = alignment2[int(target_index1) % len(alignment2)]
         if target_phase2 != -1:
             target_index2 = int(target_index1)
-    else:
+        else:
             logger.debug("Target index in alignment2 is a gap. Will use interpolation.")
 
     if target_index2 == None:
@@ -167,24 +167,24 @@ def get_roll_factor_at(alignment1, alignment2, target_phase1):
             logger.debug("Unwrapping upper_phase2.")
 
         # Get interpolated phase
-            logger.debug(
+        logger.debug(
             "Lower bound: {0} ({1}); Upper bound (unwrapped): {2} ({3})",
             lower_index2,
             lower_phase2,
             upper_index2,
             upper_phase2,
-            )
+        )
         target_phase2 = lower_phase2 + (
             (target_index2 - lower_index2)
             * (upper_phase2 - lower_phase2)
             / (upper_index2 - lower_index2)
-            )
+        )
 
-        logger.info(
+    logger.info(
         "New target phase of {0} at index {1} of alignment2",
         target_phase2,
         target_index2,
-        )
+    )
 
     # calculate roll_factor
     roll_factor = (target_phase2 - target_phase1) % len(alignment1)
@@ -458,7 +458,7 @@ def cascading_needleman_wunsch(
     * period, remplatePeriod: the float period for sequence/template_sequence in frame units (caller must determine this)
     * gap_penalty: the Needleman-Wunsch penalty for introducing a gap as a percentage (relating to the calculated score matrix)
     * interpolation_factor: integer linear interpolation factor, e.g. a factor of 2 will double the image resolution along P
-    * ref_seq_phase: integer frame (in B) for which to return the roll factor
+    * ref_seq_phase: integer frame (in A) for which to return the roll factor
     """
     if template_period is None:
         template_period = template_sequence.shape[0]
@@ -511,10 +511,9 @@ def cascading_needleman_wunsch(
     )
 
     # Cascade the SAD Grid
-    cascades = construct_cascade(score_matrix, gap_penalty=gap_penalty, axis=1)
-    logger.debug("Unrolled Traceback Matrix:")
-    logger.debug(cascades[:, :, 0])
-    logger.debug(
+    cascades = construct_cascade(score_matrix, gap_penalty=gap_penalty, axis=0)
+    logger.trace("Unrolled Traceback Matrix: {0}", cascades[:, :, 0])
+    logger.trace(
         "Dtype: {0};\tShape: ({1},{2},{3})",
         cascades.dtype,
         cascades.shape[0],
@@ -523,35 +522,38 @@ def cascading_needleman_wunsch(
     )
 
     # Pick Cascade and Roll sequence
-    roll_factor = np.argmax(cascades[-1, -1, :])
-    score = cascades[-1, -1, roll_factor]
-    score = (score + (np.iinfo(sequence.dtype).max * sequence.size / 10)) / (
-        np.iinfo(sequence.dtype).max * sequence.size / 10
+    logger.debug("Cascades scores {0}", cascades[-1, -1, :])
+    roll_factor = np.argmax(cascades[-1, -1, ::])
+    logger.info(
+        "Chose cascade {0} of {1} (global roll_factor of {2})",
+        roll_factor + 1,
+        cascades.shape[2],
+        roll_factor,
     )
-    if score < 0:
-        logger.warning("Negative Score")
-        score = 0
 
     traceback_matrix = cascades[:, :, roll_factor]
+    logger.debug("Cascaded traceback matrix: {0}", traceback_matrix)
+
+    score = traceback_matrix[-1, -1]
+    # this score will be a max of zero (perfect alignment possible)
+    # and a min of -np.iinfo(sequence.dtype).max, e.g. -(2^8 -1), * size
+    score = -score / (sequence[0].size * cascades.shape[2])
+    # this new score should be between 0.0 (good) and np.iinfo(sequence.dtype).max (bad)
+    if score < 0:
+        logger.critical("Negative Score")
+        score = 0  # set to be terrible
+
+    logger.debug(sequence[:, 0, 0])
     sequence = np.roll(sequence, roll_factor, axis=0)
-    logger.debug("Cascades scores {0}", cascades[-1, -1, :])
-    logger.info("Chose cascade {0} of {1}:", roll_factor + 1, len(sequence))
-    logger.debug("Cascaded traceback matrixes:")
-    logger.debug(traceback_matrix)
-    logger.debug(
-        "Cascade scores:\t", cascades[len(template_sequence), len(sequence), :]
-    )
-    logger.debug(
-        "Shape: ({0},{1})", traceback_matrix.shape[0], traceback_matrix.shape[1]
-    )
+    logger.debug(sequence[:, 0, 0])
 
     (alignmentAWrapped, alignmentB) = traverse_traceback_matrix(
         sequence, template_sequence, traceback_matrix
     )
 
-    logger.info("roll_factor (interpolated, base):\t{0}", roll_factor)
+    logger.debug("Rolled by (interpolated, global):\t{0}", roll_factor)
     logger.debug("Aligned sequence #1 (interpolated, wrapped):\t{0}", alignmentAWrapped)
-    logger.debug("Aligned sequence #2 (interpolated):\t\t\t{0}", alignmentB)
+    logger.trace("Aligned sequence #2 (interpolated):\t\t\t{0}", alignmentB)
 
     # roll Alignment A, taking care of indels
     alignmentA = wrap_and_roll(alignmentAWrapped, period, roll_factor)
@@ -559,9 +561,10 @@ def cascading_needleman_wunsch(
     # get roll_factor properly
     roll_factor = get_roll_factor_at(alignmentA, alignmentB, ref_seq_phase)
 
-    logger.info("roll_factor (interpolated, specific):\t{0}", roll_factor)
-    logger.debug("Aligned sequence #1 (interpolated, unwrapped):\t{0}", alignmentA)
-    logger.debug("Aligned sequence #2 (interpolated):\t\t\t{0}", alignmentB)
+    logger.debug("Alignment 1 (interpolated):\t{0}", alignmentA)
+    logger.debug("Alignment 2 (interpolated):\t{0}", alignmentB)
+    logger.info("Rolled by (interpolated, specific):\t{0}", roll_factor)
+    logger.debug("Score: {0}", score)
 
     # # Undo interpolation
     # if interpolation_factor is not None:
@@ -580,4 +583,4 @@ def cascading_needleman_wunsch(
     #     logger.info("Aligned sequence #1 (wrapped):\t\t{0}", alignmentA)
     #     logger.info("Aligned sequence #2:\t\t\t{0}", alignmentB)
 
-    return roll_factor, score
+    return roll_factor, score  # , alignmentA, alignmentB
