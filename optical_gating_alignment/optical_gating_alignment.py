@@ -31,7 +31,10 @@ def process_sequence(
     period_history=None,
     drift_history=None,
     shift_history=None,
+    global_solution=None,
     max_offset=3,
+    ref_seq_id=0,
+    ref_seq_phase=0,
     algorithm="cnw",
     **kwargs
 ):
@@ -71,7 +74,7 @@ def process_sequence(
     * shift_history: updated list of shifts calculated for sequence_history
     * global_solution[-1]: roll factor for latest reference frames
     
-    Philosophy for "cc" Algorithm:
+    Philosophy for "cc" (cross correlation) algorithm:
     * Given a target (ref_seq_phase) in an existing period (ref_seq_id, usually the first in a sequence)
     * Convert target to a shared base (resampled_period, usually 80)
     * Take new period (this_period)
@@ -81,6 +84,20 @@ def process_sequence(
     * Use multi-pass regression to use historical pairwise comparisons to minimise errors in the latest roll factor and get a global_roll_factor
     * Use the global roll factor (modulo the shared base) and the initial target to identify a new target frame
     * Convert the new target frame into the original period
+
+    Philosophy for "cnw" (cascading Needleman Wunsch) algorithm:
+    * Given a target (ref_seq_phase) in an existing period (ref_seq_id, usually the first in a sequence)
+      * DO NOT convert target to a shared base as this should not be necessary for this algorithm
+      * TODO: Interpolate sequence for higher precision (optional)
+    * Take new period (this_period)
+      * DO NOT resample this image sequence
+    * Cascading Needleman Wunsch alignment between the new, resampled period and historical periods
+      * IMPORTANT: The target (ref_seq_phase) must be followed throughout these pairwise comparisons for accurate alignment
+    * CURRENTLY: Return the best alignment for each pair (the roll_factor)
+    * TODO: Return the best alignment for each pair (alignment1, alignment2); Return the specific roll_factor for the alignments at the target (e.g. ref_seq_phase at ref_seq_id)
+    * Use multi-pass regression to use historical pairwise comparisons to minimise errors in the latest roll factor and get a global_roll_factor
+    * Use the global roll factor (modulo the shared base) and the initial target to identify a new target frame
+      * TODO: De-interpolate the target if required (optional)
     """
 
     # Deal with this_sequence type - mostly legacy
@@ -92,18 +109,13 @@ def process_sequence(
     for option in options:
         if option not in [
             "resampled_period",
-            "ref_seq_id",
-            "ref_seq_phase",
             "method",
             "interpolation_factor",
         ]:
             logger.warning("Unknown keyword argument: {0} (1)", option, kwargs[option])
-    # TODO: convert these three to actual parameters?
     resampled_period = (
         kwargs["resampled_period"] if "resampled_period" in options else None
     )
-    ref_seq_id = kwargs["ref_seq_id"] if "ref_seq_id" in options else 0
-    ref_seq_phase = kwargs["ref_seq_phase"] if "ref_seq_phase" in options else 0
     if algorithm == "cc":
         method = kwargs["method"] if "method" in options else None
     elif algorithm == "cnw":
@@ -118,20 +130,33 @@ def process_sequence(
     )
     logger.debug(this_sequence[:, 0, 0])
 
-    # initialise sequences if empty
-    # TODO catch if they get out of sync somehow
+    # Initialise sequences if empty
+    # We assume if the sequence_history is empty, we should reset all the histories
     if sequence_history is None:
-        logger.info("Creating new sequence history.")
+        logger.warning("Creating new histories.")
         sequence_history = []
-    if period_history is None:
-        logger.info("Creating new period history.")
         period_history = []
-    if drift_history is None:
-        logger.info("Creating new drift history.")
         drift_history = []
-    if shift_history is None:
-        logger.info("Creating new shift history.")
         shift_history = []
+        global_solution = None
+    elif not (
+        len(period_history) == len(sequence_history)
+        and len(drift_history) == len(sequence_history)
+    ):
+        # FIXME Doesn't catch shift_history or global_solution issues
+        logger.critical("Histories have fallen out of sync! Resetting.")
+        logger.critical(
+            "{0},{1},{2},{3}",
+            len(sequence_history),
+            len(period_history),
+            len(drift_history),
+            len(shift_history),
+        )
+        sequence_history = []
+        period_history = []
+        drift_history = []
+        shift_history = []
+        global_solution = None
 
     if algorithm == "cc" and resampled_period is None:
         logger.info("Setting resampled period length to 80 (not provided by user).")
@@ -155,6 +180,7 @@ def process_sequence(
                 period_history,
                 drift_history,
                 shift_history,
+                None,
                 -1000,
             )
     # And that shape is compatible with the history that we already have
@@ -174,6 +200,7 @@ def process_sequence(
                 period_history,
                 drift_history,
                 shift_history,
+                None,
                 -2000,
             )
 
@@ -191,7 +218,8 @@ def process_sequence(
         sequence_history.append(this_resampled_sequence)
         period_history.append(this_period)
     elif algorithm == "cnw":
-        sequence_history.append(this_sequence)
+        # DO NOT convert target to a shared base as this should not be necessary for this algorithm
+        sequence_history.append(this_sequence[2:-2])
         period_history.append(this_period)
 
     if this_drift is not None:
@@ -210,15 +238,22 @@ def process_sequence(
             "No drift correction is being applied. This will seriously impact phase locking."
         )
 
+    # Print which algorithm, just for info
+    if algorithm == "cc":
+        logger.info("Using cross correlation method.")
+    elif algorithm == "cnw":
+        logger.info("Using cascading Needleman Wunsch algorithm.")
+
     # Update our shifts array.
     # Compare the current sequence with recent previous ones
     if len(sequence_history) > 1:
         # Compare this new sequence against other recent ones
         firstOne = max(0, len(sequence_history) - max_offset - 1)
         for i in range(firstOne, len(sequence_history) - 1):
-            logger.debug("--- {0} {1}---", i, len(sequence_history) - 1)
+            logger.info(
+                "Comparing reference period {0} and {1}", i, len(sequence_history) - 1
+            )
             if algorithm == "cc":
-                logger.info("Using cross correlation method.")
                 # Pairwise cross correlation between the new resampled period and historical (also resampled) periods
                 # Returning the minimum cross-correlation for each pair (roll_factor) and the cross-correlation 'score'
                 if this_drift is None:
@@ -232,6 +267,11 @@ def process_sequence(
                     )
                 else:
                     logger.info("Drift given; accounting for drift.")
+                    # FIXME - I think I need the following?
+                    drift = [
+                        drift_history[i][0] - drift_history[ref_seq_id][0],
+                        drift_history[i][1] - drift_history[ref_seq_id][1],
+                    ]
                     seq1, seq2 = hlp.drift_correction(
                         sequence_history[i], sequence_history[-1], this_drift
                     )
@@ -251,46 +291,23 @@ def process_sequence(
                         score,
                     )
                 )
-                logger.debug("Adding shift: {0}", shift_history[-1])
+                logger.info("Adding shift: {0}", shift_history[-1])
             elif algorithm == "cnw":
+                # Cascading Needleman Wunsch alignment between the new, resampled period and historical periods
+                # The target (ref_seq_phase) must be followed throughout these pairwise comparisons for accurate alignment; we use the global solution from the last round to always use the most 'corrected' target we can
                 if i == ref_seq_id:
-                    logger.debug("Get target: Is ref_seq_id.")
-                    logger.info(
-                        "Using phase of {0} from reference sequence {1}",
-                        ref_seq_phase,
-                        ref_seq_id,
-                    )
+                    # If the comparison period is the one we have been given a target for just use ref_seq_phase
                     target = ref_seq_phase
+                elif global_solution is not None:
+                    # If the comparison period is not the one we have been given a target for then use the target inside the last global_solution
+                    target = global_solution[i] % period_history[i]
                 else:
-                    if this_drift is None:
-                        logger.debug("Get target: Not ref_seq_id; no drift and cnw.")
-                        (target, _) = cnw.cascading_needleman_wunsch(
-                            sequence_history[ref_seq_id],
-                            sequence_history[i],
-                            period_history[ref_seq_id],
-                            period_history[i],
-                            interpolation_factor=interpolation_factor,
-                            ref_seq_phase=ref_seq_phase,
-                        )
-                    else:
-                        logger.info("Drift given; accounting for drift.")
-                        drift = [
-                            drift_history[i][0] - drift_history[ref_seq_id][0],
-                            drift_history[i][1] - drift_history[ref_seq_id][1],
-                        ]
-                        seq1, seq2 = hlp.drift_correction(
-                            sequence_history[ref_seq_id], sequence_history[i], drift
-                        )
-                        logger.debug("Get target: Not ref_seq_id; with drift and cnw.")
-                        (target, _) = cnw.cascading_needleman_wunsch(
-                            seq1,
-                            seq2,
-                            period_history[ref_seq_id],
-                            period_history[i],
-                            interpolation_factor=interpolation_factor,
-                            ref_seq_phase=ref_seq_phase,
-                        )
-                    logger.info("Using target of {0}", target)
+                    # If there is no global_solution given, what should we do?
+                    logger.critical("Erm! Crud.")
+                logger.info(
+                    "Using phase of {0} from reference sequence {1}", target, i,
+                )
+
                 if this_drift is None:
                     logger.debug("Calculate shift with no drift and cnw.")
                     (roll_factor, score) = cnw.cascading_needleman_wunsch(
@@ -303,7 +320,7 @@ def process_sequence(
                     )
                 else:
                     logger.info("Drift given; accounting for drift.")
-                    # TODO - I think I need the following?
+                    # FIXME - I think I need the following?
                     drift = [
                         drift_history[i][0] - drift_history[ref_seq_id][0],
                         drift_history[i][1] - drift_history[ref_seq_id][1],
@@ -320,13 +337,11 @@ def process_sequence(
                         interpolation_factor=interpolation_factor,
                         ref_seq_phase=target,
                     )
-                shift_history.append(
-                    (i, len(sequence_history) - 1, roll_factor % period_history[-1], 1)
-                )  # TODO add score here?
-                logger.debug("Adding shift: {0}", shift_history[-1])
+                shift_history.append((i, len(sequence_history) - 1, roll_factor, score))
+                logger.info("Adding shift: {0}", shift_history[-1])
 
-    logger.debug("Printing shifts:")
-    logger.debug(shift_history)
+    logger.trace("Printing shifts:")
+    logger.success(shift_history)
 
     if algorithm == "cc":
         # Use multi-pass regression to use historical pairwise comparisons to minimise errors in the latest roll factor and get a global_solution
@@ -334,6 +349,7 @@ def process_sequence(
             shift_history, len(sequence_history), resampled_period
         )
     elif algorithm == "cnw":
+        # Use multi-pass regression to use historical pairwise comparisons to minimise errors in the latest roll factor and get a global_solution
         global_solution = mr.make_shifts_self_consistent(
             shift_history,
             len(sequence_history),
@@ -344,7 +360,7 @@ def process_sequence(
 
     logger.debug("Solution: {0}", global_solution)
 
-    logger.info("Reference Frame rolling by: {0}", global_solution[-1])
+    logger.debug("Reference Frame rolling by: {0}", global_solution[-1])
 
     if algorithm == "cc":
         # Convert initial target to the shared base too
@@ -361,7 +377,7 @@ def process_sequence(
         this_target = (
             target + (global_solution[-1] % resampled_period)
         ) % resampled_period
-        logger.debug(
+        logger.info(
             "Roll factor: {0}; New target (base resampled_sequence): {1}",
             global_solution[-1],
             this_target,
@@ -369,10 +385,18 @@ def process_sequence(
 
         # Convert the new target frame into the original period
         this_target = this_period * this_target / resampled_period
-        logger.info("New target (base this_period): {0}", this_target)
     elif algorithm == "cnw":
         this_target = global_solution[-1] % this_period
 
+    logger.success("New target (base this_period): {0}", this_target)
+
     # Note for developers:
     # there are two other return statements in this function
-    return (sequence_history, period_history, drift_history, shift_history, this_target)
+    return (
+        sequence_history,
+        period_history,
+        drift_history,
+        shift_history,
+        global_solution,
+        this_target,
+    )
