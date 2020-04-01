@@ -376,21 +376,41 @@ def traverse_traceback_matrix(sequence, template_sequence, traceback_matrix):
             alignmentA.append(-1)
             alignmentB.append(x_up)
             x = x_up
-            logger.debug("Direction Travelled:\tI've gone up")
+            logger.debug(
+                "Direction Travelled:\tI've gone up; [{0}, {1}]",
+                alignmentA[-1],
+                alignmentB[-1],
+            )
         elif direction == 0:
             alignmentA.append(y_left)
             alignmentB.append(x_up)
             x = x_up
             y = y_left
-            logger.debug("Direction Travelled:\tI've gone diagonal")
+            logger.debug(
+                "Direction Travelled:\tI've gone diagonal; [{0}, {1}]",
+                alignmentA[-1],
+                alignmentB[-1],
+            )
         elif direction == 2:
             alignmentA.append(y_left)
             alignmentB.append(-1)
             y = y_left
-            logger.debug("Direction Travelled:\tI've gone left")
+            logger.debug(
+                "Direction Travelled:\tI've gone left; [{0}, {1}]",
+                alignmentA[-1],
+                alignmentB[-1],
+            )
         if x == 0 and y == 0:
-            logger.success("Traversing Complete")
+            logger.info("Traversing Complete")
             traversing = False
+
+    # TODO - is this right?
+    # Treat leading and trailing tails as compresssible
+    # I.e. **ABC and XYZ** == ABC and ZXY
+    while alignmentA[0] == -1 and alignmentB[-1] == -1:
+        del alignmentA[0], alignmentB[-1]
+    while alignmentA[-1] == -1 and alignmentB[0] == -1:
+        del alignmentA[-1], alignmentB[0]
 
     # Reverses sequence
     alignmentA = np.asarray(alignmentA[::-1], dtype=np.float)
