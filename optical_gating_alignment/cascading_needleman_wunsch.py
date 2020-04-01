@@ -273,7 +273,11 @@ def construct_cascade(score_matrix, gap_penalty=0, axis=0):
 
     # Create 3D array to hold all cascades
     cascades = np.zeros(
-        (score_matrix.shape[0] + 1, score_matrix.shape[1] + 1, score_matrix.shape[0]),
+        (
+            score_matrix.shape[0] + 1,
+            score_matrix.shape[1] + 1,
+            score_matrix.shape[1 - axis],
+        ),
         dtype=np.float64,
     )
 
@@ -283,7 +287,7 @@ def construct_cascade(score_matrix, gap_penalty=0, axis=0):
     ):  # the 1-axis tricks means we loop over 0 if axis=1 and vice versa
         logger.trace("Getting score matrix for roll of {0} frames...", n)
         cascades[:, :, n] = fill_traceback_matrix(score_matrix, gap_penalty=gap_penalty)
-        score_matrix = np.roll(score_matrix, -1, axis=axis)
+        score_matrix = np.roll(score_matrix, 1, axis=axis)
 
     return cascades
 
