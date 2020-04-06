@@ -5,7 +5,7 @@ description = ""
 authors = ["Chas Nelson <chasnelson@glasgow.ac.uk>"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.7"
 numpy = "^1.18.1"
 loguru = "^0.4.1"
 
