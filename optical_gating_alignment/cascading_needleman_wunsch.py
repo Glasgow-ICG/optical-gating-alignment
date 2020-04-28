@@ -3,8 +3,9 @@ Uses a cascading form of the Needleman Wunsch algorithm.
 This module includes all necessary functions."""
 
 import numpy as np
-from loguru import logger
 import j_py_sad_correlation as jps
+from loguru import logger
+from numba import njit
 
 # Set-up logger
 logger.disable("optical_gating_alignment")
@@ -193,9 +194,13 @@ def get_roll_factor_at(alignment1, alignment2, target_phase1):
     return roll_factor
 
 
+@njit(parallel=False)
 def fill_traceback_matrix(score_matrix, gap_penalty=0):
     """Using a score matrix, fill out a traceback matrix.
     This can then be traversed to identify a valid alignment.
+    Note: this function contains a lot of basic python/numpy operations
+    hence numba pre-compilation can speed things up
+    but they have to occur in order, hence parallel=False
     """
     traceback_matrix = np.zeros(
         (score_matrix.shape[0] + 1, score_matrix.shape[1] + 1), dtype=np.float64
