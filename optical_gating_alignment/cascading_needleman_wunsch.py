@@ -551,6 +551,7 @@ def cascading_needleman_wunsch(
         sequence, template_sequence, traceback_matrix
     )
 
+    # TODO This is the wrong roll_factor (i.e-roll_factor)
     logger.debug("Rolled by (interpolated, global):\t{0}", roll_factor)
     logger.debug("Aligned sequence #1 (interpolated, wrapped):\t{0}", alignmentAWrapped)
     logger.trace("Aligned sequence #2 (interpolated):\t\t\t{0}", alignmentB)

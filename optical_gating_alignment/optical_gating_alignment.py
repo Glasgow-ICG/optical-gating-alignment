@@ -16,11 +16,16 @@ from . import multipass_regression as mr
 logger.disable("optical_gating_alignment")  # turn off the module logger (default)
 
 
-def set_logger(level="CRITICAL"):
+def set_logger(level="CRITICAL", format=None):
     """Small helper to change logger level."""
     logger.enable("optical_gating_alignment")
     logger.remove()
-    logger.add(sys.stderr, level=level)
+    if format == "jupyter":
+        logger.add(sys.stdout, level=level, format="{message}")
+    elif format is not None:
+        logger.add(sys.stderr, level=level, format=format)
+    else:
+        logger.add(sys.stderr, level=level)
 
 
 def process_sequence(
@@ -125,8 +130,12 @@ def process_sequence(
             else None
         )
 
+    past_sequences = 0 if period_history is None else len(period_history)
     logger.success(
-        "Processing new sequence (Period: {0}; Drift: {1}).", this_period, this_drift
+        "Processing new sequence (Period: {0}; Drift: {1}; {2} past sequences).",
+        this_period,
+        this_drift,
+        past_sequences,
     )
     logger.debug(this_sequence[:, 0, 0])
 
@@ -219,7 +228,7 @@ def process_sequence(
         period_history.append(this_period)
     elif algorithm == "cnw":
         # DO NOT convert target to a shared base as this should not be necessary for this algorithm
-        sequence_history.append(this_sequence[2:-2])
+        sequence_history.append(this_sequence)
         period_history.append(this_period)
 
     if this_drift is not None:
@@ -341,7 +350,7 @@ def process_sequence(
                 logger.info("Adding shift: {0}", shift_history[-1])
 
     logger.trace("Printing shifts:")
-    logger.success(shift_history)
+    logger.trace(shift_history)
 
     if algorithm == "cc":
         # Use multi-pass regression to use historical pairwise comparisons to minimise errors in the latest roll factor and get a global_solution
