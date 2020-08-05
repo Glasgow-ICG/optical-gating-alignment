@@ -8,19 +8,24 @@ authors = ["Chas Nelson <chasnelson@glasgow.ac.uk>"]
 python = "^3.7"
 numpy = "^1.18.1"
 loguru = "^0.4.1"
-numba = "^0.50.1"
+numba = { version = "^0.50.1", optional = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
 black = "^19.10b0"
+pylint = "^2.5.0"
+line_profiler = "^3.0.2"
 pytest-cov = "^2.8.1"
+# For notebooks:
 pandas = {version = "^1.0.3", optional = true}
 scikit-image = {version = "^0.16.2", optional = true}
 seaborn = {version = "^0.10.0", optional = true}
 jupyterlab = {version = "^2.0.1", optional = true}
-pylint = "^2.5.0"
-line_profiler = "^3.0.2"
 ipympl = {version = "^0.5.6", optional = true}
+
+[tool.poetry.extras]
+numba = ["numba"]
+notebooks = ["pandas", "scitkit-image", "seaborn", "jupyterlab", "ipympl"]
 
 [build-system]
 requires = ["poetry>=0.12"]
