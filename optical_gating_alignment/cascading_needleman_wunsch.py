@@ -5,10 +5,21 @@ This module includes all necessary functions."""
 import numpy as np
 import j_py_sad_correlation as jps
 from loguru import logger
-from numba import njit
 
 # Set-up logger
 logger.disable("optical_gating_alignment")
+
+# Import Numba or define njit if not available
+try:
+    from numba import njit
+
+    logger.info("Numba loaded; just in time compilation will work.")
+except Exception as e:
+
+    def njit(func):
+        return func
+
+    logger.info("Numba was not loadable and so just in time compilation will not work.")
 
 
 def get_roll_factor_at(alignment1, alignment2, target_phase1):
@@ -194,7 +205,7 @@ def get_roll_factor_at(alignment1, alignment2, target_phase1):
     return roll_factor
 
 
-@njit(parallel=False)
+@njit()
 def fill_traceback_matrix(score_matrix, gap_penalty=0):
     """Using a score matrix, fill out a traceback matrix.
     This can then be traversed to identify a valid alignment.
