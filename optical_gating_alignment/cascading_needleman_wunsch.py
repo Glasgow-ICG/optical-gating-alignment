@@ -205,7 +205,7 @@ def get_roll_factor_at(alignment1, alignment2, target_phase1):
     return roll_factor
 
 
-@njit()
+@njit
 def fill_traceback_matrix(score_matrix, gap_penalty=0):
     """Using a score matrix, fill out a traceback matrix.
     This can then be traversed to identify a valid alignment.
