@@ -106,8 +106,8 @@ def process_sequence(
     """
 
     # Deal with this_sequence type - mostly legacy
-    if type(this_sequence) is list:
-        this_sequence = np.vstack(this_sequence)
+    #if type(this_sequence) is list:
+        #this_sequence = np.vstack(this_sequence)
 
     logger.debug("Parsing algorithm-specific options ({0}):".format(algorithm))
     options = kwargs.keys()
@@ -137,7 +137,7 @@ def process_sequence(
         this_drift,
         past_sequences,
     )
-    logger.debug(this_sequence[:, 0, 0])
+    #logger.debug(this_sequence[:, 0, 0])
 
     # Initialise sequences if empty
     # We assume if the sequence_history is empty, we should reset all the histories
