@@ -515,7 +515,8 @@ def cascading_needleman_wunsch(
     #     )
 
     # Calculate Score Matrix - C++
-    score_matrix = jps.sad_grid(sequence, template_sequence)
+    # TODO remove these casts when jps can deal with lists
+    score_matrix = jps.sad_grid(np.array(sequence), np.array(template_sequence))
 
     logger.debug("Score Matrix:")
     logger.debug(score_matrix)
@@ -559,9 +560,9 @@ def cascading_needleman_wunsch(
         logger.critical("Negative Score")
         score = 0  # set to be terrible
 
-    logger.debug(sequence[:, 0, 0])
+    # logger.debug(sequence[:, 0, 0])
     sequence = np.roll(sequence, roll_factor, axis=0)
-    logger.debug(sequence[:, 0, 0])
+    # logger.debug(sequence[:, 0, 0])
 
     (alignmentAWrapped, alignmentB) = traverse_traceback_matrix(
         sequence, template_sequence, traceback_matrix
