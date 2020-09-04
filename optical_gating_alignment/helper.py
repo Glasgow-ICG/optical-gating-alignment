@@ -62,7 +62,7 @@ def drift_correction(sequence1, sequence2, drift):
         rectF[3] = rectF[3] - drift_y
         rect[2] = +drift_y
 
-    sequence1 = [f[rectF[0] : rectF[1], rectF[2] : rectF[3]] for f in sequence1]
-    sequence2 = [f[rectF[0] : rectF[1], rectF[2] : rectF[3]] for f in sequence2]
+    sequence1 = np.array([f[rectF[0] : rectF[1], rectF[2] : rectF[3]] for f in sequence1])
+    sequence2 = np.array([f[rectF[0] : rectF[1], rectF[2] : rectF[3]] for f in sequence2])
 
     return sequence1, sequence2

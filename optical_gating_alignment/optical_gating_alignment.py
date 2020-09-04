@@ -40,7 +40,7 @@ def process_sequence(
     max_offset=3,
     ref_seq_id=0,
     ref_seq_phase=0,
-    algorithm="cnw",
+    algorithm="cc",
     **kwargs
 ):
     """ Process a new reference sequence.
