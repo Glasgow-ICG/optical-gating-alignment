@@ -13,9 +13,6 @@ from . import cascading_needleman_wunsch as cnw
 from . import multipass_regression as mr
 
 # Set-up logger
-logger.disable("optical_gating_alignment")  # turn off the module logger (default)
-
-
 def set_logger(level="CRITICAL", format=None):
     """Small helper to change logger level."""
     logger.enable("optical_gating_alignment")
@@ -26,6 +23,7 @@ def set_logger(level="CRITICAL", format=None):
         logger.add(sys.stderr, level=level, format=format)
     else:
         logger.add(sys.stderr, level=level)
+set_logger()
 
 
 def process_sequence(
@@ -246,6 +244,9 @@ def process_sequence(
         logger.warning(
             "No drift correction is being applied. This will seriously impact phase locking."
         )
+        # We have to append something to the drift history,
+        # or code elsewhere will panic that the history lengths don't match
+        drift_history.append([0, 0])
 
     # Print which algorithm, just for info
     if algorithm == "cc":

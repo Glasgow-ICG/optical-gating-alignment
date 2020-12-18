@@ -28,5 +28,7 @@ numba = ["numba"]
 notebooks = ["pandas", "scitkit-image", "seaborn", "jupyterlab", "ipympl"]
 
 [build-system]
-requires = ["poetry>=0.12"]
+# Bug in setuptools v50 breaks installation
+# (https://stackoverflow.com/questions/63683262/modulenotfounderror-no-module-named-setuptools-distutils)
+requires = ["poetry>=0.12", "setuptools!=50.0"]
 build-backend = "poetry.masonry.api"
