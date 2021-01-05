@@ -29,7 +29,7 @@ def cross_correlation(sequence1, sequence2, method="fft"):
                 SSD = SSD + np.sum((frame - frame_rolled) ** 2)
             scores.append(SSD)
         scores = np.array(scores)
-    elif method == "fft":  # default
+    elif method == "fft" or method == None:  # default
         # The following is mathematically equivalent to the SSD but in Fourier space
         # It is generally faster than just the SSD (not for small cases though)
         sequence1 = sequence1.astype("float", copy=False)
