@@ -9,7 +9,7 @@ import j_py_sad_correlation as jps
 logger.disable("optical_gating_alignment")
 
 
-def cross_correlation(sequence1, sequence2, method=None):
+def cross_correlation(sequence1, sequence2, method="fft"):
     """Calculates cross correlation scores for each possible relative integer timeshifts between two numpy arrays (sequences) of order TXY.
     This uses the FFT for speed but is equivalent to the sum squared differences for each timeshift.
     Note: assumes both sequences are the same length."""
@@ -19,8 +19,8 @@ def cross_correlation(sequence1, sequence2, method=None):
     sequence2 = sequence2.reshape([len(sequence2), -1])
 
     if method == "ssd":
-        sequence1 = sequence1.astype("float")
-        sequence2 = sequence2.astype("float")
+        sequence1 = sequence1.astype("float", copy=False)
+        sequence2 = sequence2.astype("float", copy=False)
         scores = []
         for roll in np.arange(len(sequence2)):
             sequence2_rolled = np.roll(sequence2, -roll, axis=0)
@@ -29,18 +29,20 @@ def cross_correlation(sequence1, sequence2, method=None):
                 SSD = SSD + np.sum((frame - frame_rolled) ** 2)
             scores.append(SSD)
         scores = np.array(scores)
-    elif method == "fft" or method is None:  # default
+    elif method == "fft":  # default
         # The following is mathematically equivalent to the SSD but in Fourier space
         # It is generally faster than just the SSD (not for small cases though)
-        sequence1 = sequence1.astype("float")
-        sequence2 = sequence2.astype("float")
+        sequence1 = sequence1.astype("float", copy=False)
+        sequence2 = sequence2.astype("float", copy=False)
         temp = np.conj(np.fft.fft(sequence1, axis=0)) * np.fft.fft(sequence2, axis=0)
         temp2 = np.fft.ifft(temp, axis=0)
-        scores = (
-            np.sum(sequence1 * sequence1)
-            + np.sum(sequence2 * sequence2)
-            - 2 * np.sum(np.real(temp2), axis=1)
-        )
+        # Compute the sum of squares of sequence1 and sequence2
+        # (it is significantly faster to use np.dot compared to np.sum(a**2))
+        # Note that these terms actually make no difference to where the minimum of the cross-correlation is,
+        # but given that they're fast compared to the FFT, it keeps things consistent if we do calculate them.
+        temp3 = np.dot(sequence1.ravel(), sequence1.ravel()) \
+                + np.dot(sequence2.ravel(), sequence2.ravel())
+        scores = temp3  - 2 * np.sum(np.real(temp2), axis=1)
     elif method == "jps":
         # The following is part of the C++ module py_sad_correlation
         # It is slower than the FFT but here for completeness
