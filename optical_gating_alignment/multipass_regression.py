@@ -35,7 +35,12 @@ def solve_for_shifts(shifts, number_of_sequences, ref_seq_id, ref_seq_phase):
     Mw = M * np.sqrt(w[:, np.newaxis])
     aw = a * np.sqrt(w)
     logger.trace("Mw := {0};\taw := {1};", Mw, aw)
-    (self_consistent_shifts, _, _, _) = np.linalg.lstsq(Mw, aw, rcond=None)
+    try:
+        (self_consistent_shifts, _, _, _) = np.linalg.lstsq(Mw, aw, rcond=None)
+    except ValueError:
+        # Extra debug output to understand the issue described in #14.
+        logger.critical("lstsq failed with Mw := {0};\taw := {1};", Mw, aw)
+        raise
     logger.trace(self_consistent_shifts)
     return self_consistent_shifts
 
