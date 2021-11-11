@@ -57,17 +57,20 @@ def process_sequence(
       * if no drift correction is used, this is a dummy variable
     * shift_history: previously calculated relative shifts between
                      sequence_history
+    * global_solution: previously calculated adjustment factors between sequences.
+                       We read this to deduce what the previous target phase was
     * max_offset: how far apart historically to make comparisons
-    * for 'cc' algorithm:
-    * method
-    * resampled_period: the number of frames to use for resampled sequences
-      * should be used to prevent comparing sequences that are far apart
-        and have little similarity
-    * for 'cnw' alorithm:
     * ref_seq_id: the index of sequence_history for which
-                             ref_seq_phase applies
+      ref_seq_phase applies
     * ref_seq_phase: the phase (index) we are trying to match in
-                                ref_seq_id
+      ref_seq_id. This is in the caller's frame units, it has not been normalised to resampled_period
+    * algorithm: 'cc' or 'cnw'
+      
+    for 'cc' algorithm:
+    * resampled_period: the number of frames to use for resampled sequences
+    
+    for 'cnw' alorithm:
+    ??
 
     Outputs:
     * sequence_history: updated list of resampled reference frames
@@ -383,7 +386,7 @@ def process_sequence(
             target,
         )
 
-        # Use the global_solution (modulo the shared base) and the initial target to identify  new target frame
+        # Use the global_solution (modulo the shared base) and the initial target to identify new target frame
         this_target = (
             target + (global_solution[-1] % resampled_period)
         ) % resampled_period
@@ -393,8 +396,8 @@ def process_sequence(
             this_target,
         )
 
-        # Convert the new target frame into the original period
-        this_target = this_period * this_target / resampled_period
+        # Convert the new target frame back into the caller's original period
+        this_target = ((this_target / resampled_period) * this_period) % this_period
     elif algorithm == "cnw":
         this_target = global_solution[-1] % this_period
 
