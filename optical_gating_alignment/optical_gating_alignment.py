@@ -25,6 +25,63 @@ def set_logger(level="CRITICAL", format=None):
         logger.add(sys.stderr, level=level)
 set_logger()
 
+class Aligner:
+    # TODO: Chas's CNW algorithm (which may or may not be fully coded/tested/working) should really be
+    # a separate subclass. For now though, I am going to avoid messing around with the existing code too much
+    def __init__(self, oga_settings):
+        self.sequence_history = None
+        self.period_history = None
+        self.drift_history = None
+        self.shift_history = None
+        self.global_solution = None
+        self.settings = oga_settings.copy()
+
+    def process_initial_sequence(self,
+                                 this_sequence,
+                                 this_period,
+                                 this_drift,
+                                 tgt_frame):
+        """ Process the first reference sequence and determine new target frame.
+            See standalone function process_sequence() [below] for parameter definitions etc.
+            """
+        assert(self.period_history is None)  # Check this is the first sequence
+        self.set_target_frame(tgt_frame, 0)
+        self.process_sequence(this_sequence, this_period, this_drift)
+    
+    def set_target_frame(self, tgt_frame, ref_seq_id=None):
+        # JT TODO: need to double check that this is in target frame units (what period?) and update comments and variable names
+        if ref_seq_id is None:
+            # Default is defining the target frame within the most recent reference sequence (which must exist)
+            assert(self.period_history is not None)
+            ref_seq_id = len(self.period_history) - 1
+        self.ref_seq_id = ref_seq_id
+        self.ref_seq_tgt_frame = tgt_frame
+
+    def process_sequence(self, this_sequence, this_period, this_drift):
+        """ Process a new reference sequence and determine new target frame.
+            See standalone function process_sequence() [below] for parameter definitions etc.
+        """
+        (
+         self.sequence_history,
+         self.period_history,
+         self.drift_history,
+         self.shift_history,
+         self.global_solution,
+         this_target
+         ) = process_sequence(this_sequence,
+                              this_period,
+                              this_drift,
+                              self.sequence_history,
+                              self.period_history,
+                              self.drift_history,
+                              self.shift_history,
+                              self.global_solution,
+                              self.settings["max_offset"],
+                              self.ref_seq_id,
+                              self.ref_seq_tgt_frame,
+                              resampled_period=self.settings["resampled_period"])
+        return this_target
+                         
 
 def process_sequence(
     this_sequence,
@@ -143,7 +200,7 @@ def process_sequence(
     # Initialise sequences if empty
     # We assume if the sequence_history is empty, we should reset all the histories
     if sequence_history is None:
-        logger.warning("Creating new histories.")
+        logger.debug("Creating new histories.")
         sequence_history = []
         period_history = []
         drift_history = []
