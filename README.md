@@ -1,4 +1,4 @@
-# Reference period alignment algorithms for adaptive prospective optical gating for time-lapse 3D fluorescence microscopy
+# Reference sequence alignment algorithms for adaptive prospective optical gating for time-lapse 3D fluorescence microscopy
 
 [![DeepSource](https://static.deepsource.io/deepsource-badge-light-mini.svg)](https://deepsource.io/gh/Glasgow-ICG/optical-gating-alignment/?ref=repository-badge)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -22,3 +22,12 @@ This repository contains the algorithms that allow long-term phase-lock to be ma
 
 1. The data repository for [1] has a copy of the cross-correlation method codes contained in doi:[10.1038/s41467-019-13112-6](http://dx.doi.org/10.1038/s41467-019-13112-6).
 2. Our Raspberry Pi-based open optical gating solution uses this repository as a submodule here:[GlasgowICG/open-optical-gating](https://github.com/Glasgow-ICG/open-optical-gating).
+
+## Installation
+
+Normally this would be installed as part of installing open-optical-gating. However, if you need to install this on its own, read on...
+
+For standard installation as a python module, run:
+`python3 -m pip install git+https://github.com/Glasgow-ICG/optical-gating-alignment.git@master#egg=optical-gating-alignment`
+If you want to install an editable copy of the source code, run:
+`python3 -m pip install --src "." -e git+https://github.com/Glasgow-ICG/optical-gating-alignment.git@master#egg=optical-gating-alignment`
